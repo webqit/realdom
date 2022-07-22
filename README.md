@@ -214,41 +214,43 @@ setTimeout( () => {
 }, 3000 );
 ```
 
-## Observe-Only Query Methods
+## Other Methods
 
 ### `r.connectedCallback()`
 
 ```js
-// Equivalent to r.querySelectorAll() but only for new additions
+// Equivalent to r.querySelectorAll() but only for an element instance, instead of a selector
 ```
 
 ```js
-// Also takes an existing element
+// Takes an element instance
 q.realtime( document.querySelector( 'p' ) ).connectedCallback( pElement  => {
 } );
 ```
 
 ```js
-// Also takes multiple existing elements
+// Also takes multiple element instances
 q.realtime( document.querySelectorAll( 'p' ) ).connectedCallback( ( pElement, connectedFlag, connectedFlagNow, totalCoonected, totalDiscoonected )  => {
+    console.log( totalCoonected, totalDiscoonected );
 }, { maintainCallState: true /* to receive totalCoonected and totalDiscoonected */ } );
 ```
 
 ### `r.disconnectedCallback()`
 
 ```js
-// Equivalent to r.querySelectorNone() but only for new removal
+// Equivalent to r.querySelectorNone() but only for an element instance, instead of a selector
 ```
 
 ```js
-// Also takes an existing element
+// Takes an element instance
 q.realtime( document.querySelector( 'p' ) ).disconnectedCallback( pElement  => {
 } );
 ```
 
 ```js
-// Also takes multiple existing elements
+// Also takes multiple element instances
 q.realtime( document.querySelectorAll( 'p' ) ).disconnectedCallback( ( pElement, connectedFlag, connectedFlagNow, totalCoonected, totalDiscoonected )  => {
+    console.log( totalCoonected, totalDiscoonected );
 }, { maintainCallState: true /* to receive totalCoonected and totalDiscoonected */ } );
 ```
 

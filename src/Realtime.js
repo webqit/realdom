@@ -165,7 +165,7 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 	 */
 	connectedCallback( callback, params = {} ) {
 		this.each( el => {
-			if ( el.parentNode ) { callback( el, 1 ); }
+			if ( el.isConnected ) { callback( el, 1 ); }
 		}, params );
 		params = { ...params, on: 'added' };
 		return this.presenceChangeCallback( ( result, connectedState, transientNewConnectedState, ...etc ) => {
@@ -183,7 +183,7 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 	 */
 	disconnectedCallback( callback, params = {} ) {
 		this.each( el => {
-			if ( !el.parentNode ) { callback( el, 0 ); }
+			if ( !el.isConnected ) { callback( el, 0 ); }
 		}, params );
 		params = { ...params, on: 'removed' };
 		return this.presenceChangeCallback( ( result, connectedState, transientNewConnectedState, ...etc ) => {
