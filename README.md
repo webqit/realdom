@@ -261,7 +261,7 @@ q.realtime( document.querySelectorAll( 'p' ) ).disconnectedCallback( ( pElement,
 ### `r.presenceChangeCallback()`
 
 ```js
-// Equivalent to r.connectedCallback() + r.disconnectedCallback()
+// Equivalent to r.connectedCallback() + r.disconnectedCallback(), but only on new mutations
 ```
 
 ### `r.attributeChangeCallback()`
