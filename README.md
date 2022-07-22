@@ -225,6 +225,8 @@ setTimeout( () => {
 ```js
 // Takes an element instance
 q.realtime( document.querySelector( 'p' ) ).connectedCallback( pElement  => {
+    // We're called immediately if element is connected
+    // And later on subsequent connectedness
 } );
 ```
 
@@ -244,6 +246,8 @@ q.realtime( document.querySelectorAll( 'p' ) ).connectedCallback( ( pElement, co
 ```js
 // Takes an element instance
 q.realtime( document.querySelector( 'p' ) ).disconnectedCallback( pElement  => {
+    // We're called immediately if element is disconnected
+    // And later on subsequent disconnectedness
 } );
 ```
 
