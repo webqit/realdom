@@ -63,7 +63,8 @@ const r = pElements.realtime(); // Or q.realtime( pElements ); Or q.realtime( 'p
 ```js
 // Get all "span" elements each, and in realtime
 let observer = r.querySelectorAll( 'span', spanElement => {
-    // Each existing descendant "span is immediately logged
+    // Each existing descendant "span" element is immediately logged
+    // Subsequently added ones are logged too
     console.log( spanElement ); // HTMLElement
 } );
 ```
@@ -136,6 +137,7 @@ setTimeout( () => {
 // Get all children each, and in realtime
 let observer = r.children( childElement => {
     // Each existing child is immediately logged
+    // Subsequently added ones are logged too
     console.log( childElement ); // HTMLElement
 } );
 ```
@@ -171,6 +173,8 @@ setTimeout( () => {
 // Get all attributes each, and in realtime
 let observer = r.attributes( ( { name, value } ) => {
     // Each existing attribute is immediately logged
+    // Subsequently added/remved ones are logged too
+    // Removed ones have their values undefined
     console.log( name, value );
 } );
 ```
@@ -179,6 +183,8 @@ let observer = r.attributes( ( { name, value } ) => {
 // Get attributes by name, and in realtime
 let observer = r.attributes( [ name1, name2 ], ( value1, value2 ) => {
     // Each existing attribute is immediately logged
+    // Subsequently added/remved ones are logged too
+    // Removed ones have their values undefined
     console.log( value1, value2 );
 } );
 ```
