@@ -16,6 +16,13 @@ import init from '@webqit/dom';
 init.call( window );
 ```
 
+## Document-Ready Method
+
+```js
+window.wq.dom.ready( () => {
+} );
+```
+
 ## Static Query Methods
 
 ```js
