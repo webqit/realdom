@@ -1,0 +1,68 @@
+{
+  "name": "@webqit/dom",
+  "title": "DOM",
+  "description": "Low-level DOM APIs.",
+  "keywords": [
+    "DOM",
+    "Mutation Observer",
+    "realtime-dom",
+    "reactive DOM library"
+  ],
+  "homepage": "https://webqit.io/tooling/dom",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webqit/dom.git"
+  },
+  "bugs": {
+    "url": "https://github.com/webqit/dom/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "browser": {
+    "fs": false
+  },
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "mocha --extension .test.js --exit",
+    "test:coverage": "c8 --reporter=text-lcov npm run test | coveralls",
+    "build": "esbuild main=src/browser-entry.js html-modules=src/html-modules/browser-entry.js html-imports=src/html-imports/browser-entry.js state-api=src/state-api/browser-entry.js namespaced-html=src/namespaced-html/browser-entry.js subscript=src/subscript/browser-entry.js --bundle --minify --sourcemap --outdir=dist",
+    "preversion": "npm run test && npm run build && git add -A dist",
+    "postversion": "npm publish",
+    "postpublish": "git push && git push --tags"
+  },
+  "dependencies": {
+    "@webqit/util": "^0.8.7"
+  },
+  "devDependencies": {
+    "chai": "^4.3.4",
+    "coveralls": "^3.1.1",
+    "esbuild": "^0.14.43",
+    "jsdom": "^20.0.0",
+    "mocha": "^9.0.2",
+    "mocha-lcov-reporter": "^1.3.0"
+  },
+  "author": "Oxford Harrison <oxharris.dev@gmail.com>",
+  "maintainers": [
+    "Oxford Harrison <oxharris.dev@gmail.com>"
+  ],
+  "contributors": [],
+  "funding": {
+    "type": "patreon",
+    "url": "https://patreon.com/ox_harris"
+  },
+  "badges": {
+    "list": [
+      "npmversion",
+      "npmdownloads"
+    ],
+    "config": {
+      "patreonUsername": "ox_harris",
+      "githubUsername": "webqit",
+      "githubRepository": "dom",
+      "githubSlug": "webqit/dom",
+      "npmPackageName": "@webqit/dom"
+    }
+  }
+}
