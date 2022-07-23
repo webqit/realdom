@@ -95,14 +95,14 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 	 * @return ObserverConnection
 	 */
 	children( callback, params = {} ) {
-		super.children( params ).forEach( el => callback( el, 1 ) );
+		emit( super.children( params ), callback, params, 1 );
 		const observer = new window.MutationObserver( mutations => {
 			const [ removed__addedNodes, added__removedNodes, removedNodes, addedNodes ] = getMutationRecordNodes( mutations );
 			emit( removed__addedNodes, callback, params, 0, 1 );
 			emit( added__removedNodes, callback, params, 1, 0 );
 			emit( removedNodes, callback, params, 0 );
 			emit( addedNodes, callback, params, 1 );
-		});
+		} );
 		const el = this.get( 0, params );
 		const _el = el instanceof window.HTMLTemplateElement ? el.content : el; 
 		observer.observe( _el, { childList: true } );
@@ -128,8 +128,7 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 	 */
 	querySelectorAll( selector, callback, params = {} ) {
 		const result = super.querySelectorAll( selector, params );
-		if ( params.each ) { result.forEach( el => callback( el, 1 ) ); }
-		else { callback( result, 1 ) }
+		emit( result, callback, params, 1 );
 		const el = this.get( 0, params );
 		return this.constructor.from( [ selector ] ).presenceChangeCallback( callback, { ...params, context: el || params.context } );
 	}
@@ -296,9 +295,9 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
  * @return Void
  */
 function emit( nodeSet, callback, params, ...args ) {
-	if ( params.each ) nodeSet.forEach( el => callback( el, ...args ) );
-	else if ( nodeSet instanceof Set && nodeSet.size ) callback( [ ...nodeSet ], ...args );
-	else if ( Array.isArray( nodeSet ) && nodeSet.length ) callback( nodeSet, ...args );
+	if ( params.each ) { nodeSet.forEach( el => callback( el, ...args ) ); }
+	else if ( ( nodeSet instanceof Set ) && nodeSet.size ) { callback( [ ...nodeSet ], ...args ); }
+	else if ( Array.isArray( nodeSet ) && nodeSet.length ) { callback( nodeSet, ...args ); }
 }
 
 /**
