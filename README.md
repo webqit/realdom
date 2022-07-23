@@ -73,8 +73,11 @@ let observer = r.querySelectorAll( 'span', spanElement => {
     // Each existing descendant "span" element is immediately logged
     // Subsequently added ones are logged too
     console.log( spanElement ); // HTMLElement
-} );
+}, { each: true } );
 ```
+
+> **Note**
+> <br>The `each` parameter means that we want our callback to receive elements one-by-one.
 
 ```js
 const addSpan = () => pElements[ 0 ].appendChild( document.createElement( 'span' ) );
@@ -110,7 +113,7 @@ let observer = r.querySelectorNone( 'span', spanElement => {
     // If no "span" elements, we're called immediately, and spanElement is null
     // If an existing spanElement is removed from DOM, we're called
     console.log( spanElement?.isConnected ); // false
-} );
+}, { each: true } );
 ```
 
 ```js
@@ -146,7 +149,7 @@ let observer = r.children( childElement => {
     // Each existing child is immediately logged
     // Subsequently added ones are logged too
     console.log( childElement ); // HTMLElement
-} );
+}, { each: true } );
 ```
 
 ```js
@@ -234,14 +237,14 @@ setTimeout( () => {
 q.realtime( document.querySelector( 'p' ) ).connectedCallback( pElement  => {
     // We're called immediately if element is connected
     // And later on subsequent connectedness
-} );
+}, { each: true } );
 ```
 
 ```js
 // Also takes multiple element instances
 q.realtime( document.querySelectorAll( 'p' ) ).connectedCallback( ( pElement, connectedFlag, connectedFlagNow, totalCoonected, totalDiscoonected )  => {
     console.log( totalCoonected, totalDiscoonected );
-}, { maintainCallState: true /* to receive totalCoonected and totalDiscoonected */ } );
+}, { each: true, maintainCallState: true /* to receive totalCoonected and totalDiscoonected */ } );
 ```
 
 ### `r.disconnectedCallback()`
@@ -255,14 +258,14 @@ q.realtime( document.querySelectorAll( 'p' ) ).connectedCallback( ( pElement, co
 q.realtime( document.querySelector( 'p' ) ).disconnectedCallback( pElement  => {
     // We're called immediately if element is disconnected
     // And later on subsequent disconnectedness
-} );
+}, { each: true } );
 ```
 
 ```js
 // Also takes multiple element instances
 q.realtime( document.querySelectorAll( 'p' ) ).disconnectedCallback( ( pElement, connectedFlag, connectedFlagNow, totalCoonected, totalDiscoonected )  => {
     console.log( totalCoonected, totalDiscoonected );
-}, { maintainCallState: true /* to receive totalCoonected and totalDiscoonected */ } );
+}, { each: true, maintainCallState: true /* to receive totalCoonected and totalDiscoonected */ } );
 ```
 
 ### `r.presenceChangeCallback()`

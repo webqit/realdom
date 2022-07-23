@@ -97,19 +97,15 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 	children( callback, params = {} ) {
 		super.children( params ).forEach( el => callback( el, 1 ) );
 		const observer = new window.MutationObserver( mutations => {
-			mutations.forEach( mu => {
-				mu.addedNodes.forEach( el => {
-					if ( el.isConnected ) { callback( el, 1 ) }
-					else { callback( el, 0, 1 ) }
-				} );
-				mu.removedNodes.forEach( el => {
-					if ( !el.isConnected ) { callback( el, 0 ) }
-					else { callback( el, 1, 0 ) }
-				} );
-			} );
+			const [ removed__addedNodes, added__removedNodes, removedNodes, addedNodes ] = getMutationRecordNodes( mutations );
+			emit( removed__addedNodes, callback, params, 0, 1 );
+			emit( added__removedNodes, callback, params, 1, 0 );
+			emit( removedNodes, callback, params, 0 );
+			emit( addedNodes, callback, params, 1 );
 		});
 		const el = this.get( 0, params );
-		observer.observe( el, { childList: true } );
+		const _el = el instanceof window.HTMLTemplateElement ? el.content : el; 
+		observer.observe( _el, { childList: true } );
 		const _this = this;
 		return {
 			disconnect() {
@@ -131,11 +127,11 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 	 * @return ObserverConnection
 	 */
 	querySelectorAll( selector, callback, params = {} ) {
-		super.querySelectorAll( selector, params ).forEach( el => callback( el, 1 ) );
+		const result = super.querySelectorAll( selector, params );
+		if ( params.each ) { result.forEach( el => callback( el, 1 ) ); }
+		else { callback( result, 1 ) }
 		const el = this.get( 0, params );
-		return this.constructor.from( [ selector ] ).presenceChangeCallback( ( result, connectedState, transientNewConnectedState ) => {
-			result.forEach( el => callback( el, connectedState, transientNewConnectedState ) );
-		}, { ...params, context: el || params.context } );
+		return this.constructor.from( [ selector ] ).presenceChangeCallback( callback, { ...params, context: el || params.context } );
 	}
 
 	/**
@@ -148,11 +144,12 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 	 * @return ObserverConnection
 	 */
 	querySelectorNone( selector, callback, params = {} ) {
-		if ( super.querySelectorAll( selector, params ).length === 0 ) { callback( null, 0 ); }
+		if ( super.querySelectorAll( selector, params ).length === 0 ) {
+			if ( params.each ) { callback( null, 0 ); }
+			else callback( [], 0 );
+		}
 		const el = this.get( 0, params );
-		return this.constructor.from( [ selector ] ).presenceChangeCallback( ( result, connectedState, transientNewConnectedState ) => {
-			result.forEach( el => callback( el, connectedState, transientNewConnectedState ) );
-		}, { ...params, context: el || params.context } );
+		return this.constructor.from( [ selector ] ).presenceChangeCallback( callback, { ...params, context: el || params.context } );
 	}
 		
 	/**
@@ -164,13 +161,15 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 	 * @return ObserverConnection
 	 */
 	connectedCallback( callback, params = {} ) {
+		const result = [];
 		this.each( el => {
-			if ( el.isConnected ) { callback( el, 1 ); }
+			if ( !el.isConnected ) return;
+			// Emit right away? Or collect...
+			if ( params.each ) { callback( el, 1 ); }
+			else { result.push( el ); }
 		}, params );
-		params = { ...params, on: 'added' };
-		return this.presenceChangeCallback( ( result, connectedState, transientNewConnectedState, ...etc ) => {
-			result.forEach( el => callback( el, connectedState, transientNewConnectedState, ...etc ) );
-		}, params );
+		if ( result.length ) { callback( result, 1 ); }
+		return this.presenceChangeCallback( callback, { ...params, on: 'added' } );
 	}
 
 	/**
@@ -182,13 +181,15 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 	 * @return Object
 	 */
 	disconnectedCallback( callback, params = {} ) {
+		const result = [];
 		this.each( el => {
-			if ( !el.isConnected ) { callback( el, 0 ); }
+			if ( el.isConnected ) return;
+			// Emit right away? Or collect...
+			if ( params.each ) { callback( el, 0 ); }
+			else { result.push( el ); }
 		}, params );
-		params = { ...params, on: 'removed' };
-		return this.presenceChangeCallback( ( result, connectedState, transientNewConnectedState, ...etc ) => {
-			result.forEach( el => callback( el, connectedState, transientNewConnectedState, ...etc ) );
-		}, params );
+		if ( result.length ) { callback( result, 0 ); }
+		return this.presenceChangeCallback( callback, { ...params, on: 'removed' } );
 	}
 
 	/**
@@ -268,9 +269,9 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 					}
 				} );
 				if ( params.maintainCallState ) {
-					callback( list, connectedState, transientNewConnectedState, totalConnected, totalDisconnected );
+					emit( list, callback, params, connectedState, transientNewConnectedState, totalConnected, totalDisconnected );
 				} else {
-					callback( list, connectedState, transientNewConnectedState );
+					emit( list, callback, params, connectedState, transientNewConnectedState );
 				}
 			}
 		};
@@ -287,6 +288,21 @@ export default ( window, Super = Array ) => class Realtime extends _Query( windo
 
 /**
  * 
+ * @param Set|Array nodeSet
+ * @param Function callback
+ * @param Object params
+ * @param Array args
+ * 
+ * @return Void
+ */
+function emit( nodeSet, callback, params, ...args ) {
+	if ( params.each ) nodeSet.forEach( el => callback( el, ...args ) );
+	else if ( nodeSet instanceof Set && nodeSet.size ) callback( [ ...nodeSet ], ...args );
+	else if ( Array.isArray( nodeSet ) && nodeSet.length ) callback( nodeSet, ...args );
+}
+
+/**
+ * 
  * @param Element context 
  * @param Function callback 
  * 
@@ -299,33 +315,11 @@ function contextObserverCallback( context, callback ) {
 	   const callbacks = new Set;
 	   const observer = new window.MutationObserver( mutations => {
 		   if ( !callbacks.size ) return;
-		   const addedNodes = new Set, removed__addedNodes = new Set;
-		   const removedNodes = new Set, added__removedNodes = new Set;
-		   mutations.forEach( mu => {
-				// Initial categorization for addedNodes and added__removedNodes
-				mu.addedNodes.forEach( el => {
-					if ( !el.isConnected ) {
-						added__removedNodes.add( el );
-					} else { addedNodes.add( el ); }
-				} );
-				// Complete categorization for removedNodes and removed__addedNodes
-				mu.removedNodes.forEach( el => {
-					if ( el.isConnected && addedNodes.has( el ) ) {
-						addedNodes.delete( el );
-						removed__addedNodes.add( el );
-					} else { removedNodes.add( el ); }
-				} );
-				// Finalization for addedNodes and added__removedNodes
-				added__removedNodes.forEach( el => {
-					if ( !removedNodes.has( el ) ) {
-						added__removedNodes.delete( el );
-						addedNodes.add( el );
-					}
-				} );
-		   } );
+		   const [ removed__addedNodes, added__removedNodes, removedNodes, addedNodes ] = getMutationRecordNodes( mutations );
 		   callbacks.forEach( callback => callback( removed__addedNodes, added__removedNodes, removedNodes, addedNodes ) );
 	   });
-	   observer.observe( context, { childList: true, subtree: true } );
+	   const _context = context instanceof window.HTMLTemplateElement ? context.content : context; 
+	   observer.observe( _context, { childList: true, subtree: true } );
 	   MutationObserversCache.set( context, { callbacks, observer } );
    }
    MutationObserversCache.get( context ).callbacks.add( callback );
@@ -346,4 +340,38 @@ function contextObserverCallback( context, callback ) {
 	   }
    };
    return controller;
+}
+
+/**
+ * 
+ * @param Array<MutationRecord> mutations 
+ * 
+ * @return Array
+ */
+function getMutationRecordNodes( mutations ) {
+	const addedNodes = new Set, removed__addedNodes = new Set;
+	const removedNodes = new Set, added__removedNodes = new Set;
+	mutations.forEach( mu => {
+		// Initial categorization for addedNodes and added__removedNodes
+		mu.addedNodes.forEach( el => {
+			if ( !el.isConnected ) {
+				added__removedNodes.add( el );
+			} else { addedNodes.add( el ); }
+		} );
+		// Complete categorization for removedNodes and removed__addedNodes
+		mu.removedNodes.forEach( el => {
+			if ( el.isConnected && addedNodes.has( el ) ) {
+				addedNodes.delete( el );
+				removed__addedNodes.add( el );
+			} else { removedNodes.add( el ); }
+		} );
+		// Finalization for addedNodes and added__removedNodes
+		added__removedNodes.forEach( el => {
+			if ( !removedNodes.has( el ) ) {
+				added__removedNodes.delete( el );
+				addedNodes.add( el );
+			}
+		} );
+	} );
+	return [ removed__addedNodes, added__removedNodes, removedNodes, addedNodes ];
 }

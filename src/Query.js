@@ -77,7 +77,7 @@ export default ( window, Super = Array ) => class Query extends Super {
 	children( params = {} ) {
 		const el = this.get( 0, params );
 		if ( !el ) return this.constructor.from( [] );
-		return this.constructor.from( el.children );
+		return this.constructor.from( el instanceof this.window.HTMLTemplateElement ? el.content.children : el.children );
 	}
 
 	/**
@@ -212,9 +212,13 @@ export function meta( name, readWrite = false ) {
     // Read prop...
     metaInstance.get = function(prop) { return JSON.stringify( _get( this.content, prop.split( '.' ) ) ); }
     // Copy...
-    metaInstance.copy = function( defaults = undefined ) {
-		if ( defaults ) return _merge( true, {}, defaults, this.content );
+    metaInstance.copy = function() {
 		return JSON.stringify( this.content );
+    };
+	// Copy with defaults...
+    metaInstance.copyWithDefaults = function( ...defaults ) {
+		if ( defaults.length ) return _merge( true, {}, ...defaults.reverse().concat( this.content ) );
+		return this.copy();
     };
     return metaInstance;
 }

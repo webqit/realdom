@@ -23,9 +23,9 @@ export default function() {
     window.wq.dom.reflow = new Reflow;
     window.wq.dom.ready = ready.bind( window );
     window.wq.dom.meta = meta.bind( window );
-    window.wq.dom.extend = ( nethodName, handler, { realtime = false } = {} ) => {
-        if ( realtime !== 'only' ) { Query.prototype[ nethodName ] = handler; }
-        if ( realtime ) { Realtime.prototype[ nethodName ] = handler; }
+    window.wq.dom.extend = ( nethodName, handler, { supportsRealtime = false } = {} ) => {
+        if ( supportsRealtime !== 'only' ) { Query.prototype[ nethodName ] = handler; }
+        if ( supportsRealtime ) { Realtime.prototype[ nethodName ] = handler; }
     };
     polyfill.call( window );
     // ------
