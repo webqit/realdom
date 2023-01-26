@@ -166,7 +166,7 @@ export default class Mutations {
 						traps.forEach( trap => {
 							if ( record.type === 'mutation-observer' ) {
 								// Mutation observers can already see every elements from HTML parse stream 
-								trap = { ...trap, params: { ...trap.params, deepIntersect: false } };
+								trap = { ...trap, params: { ...trap.params, deepIntersect: false, filter: node => !node.wqIntercepted } };
 							} else {
 								record.incomingNodes.concat( record.outgoingNodes ).forEach( node => {
 									node.wqIntercepted = true;
@@ -340,7 +340,7 @@ export default class Mutations {
 						outgoingNodes:removedNodes,
 						type,
 					} );
-				}, { subtree: true, filter: node => !node.wqIntercepted } );
+				}, { subtree: true } );
 				document.addEventListener( 'readystatechange', () => {
 					controller.disconnect();
 				} );
