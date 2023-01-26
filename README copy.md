@@ -23,7 +23,7 @@ window.wq.dom.ready( () => {
 } );
 ```
 
-## Realtime
+## Static Query Methods
 
 ```js
 const q = window.wq.dom;
