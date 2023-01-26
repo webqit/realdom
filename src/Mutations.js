@@ -16,6 +16,7 @@ import { _from as _arrFrom } from '@webqit/util/arr/index.js';
  * @var Map
  */
 const MutationInterceptorsCache = [ new Map, new Map, ];
+MutationInterceptorsCache.hasListeners = () => MutationInterceptorsCache.some( x => x.size );
 export default class Mutations {
 
 	/**
@@ -164,7 +165,7 @@ export default class Mutations {
 						if ( !( record.target === context || ( index && ( context === document && record.target.isConnected || context.contains( record.target ) ) ) ) ) return;
 						traps.forEach( trap => {
 							if ( record.type === 'mutation-observer' ) {
-								// Mutation observers can already every elements from HTML parse stream 
+								// Mutation observers can already see every elements from HTML parse stream 
 								trap = { ...trap, params: { ...trap.params, deepIntersect: false } };
 							} else {
 								record.incomingNodes.concat( record.outgoingNodes ).forEach( node => {
@@ -194,7 +195,10 @@ export default class Mutations {
 				// Monkey now...
                 Interface.prototype[ apiName ] = function( ...args ) {
 					// Instance of Node interface? Abort!
-					if ( !( this instanceof Element ) ) return originalApis[ apiName ].call( this, ...args );
+					const exec = () => originalApis[ apiName ].call( this, ...args );
+					if ( !( this instanceof Element ) ) return exec();
+					// Bail out early
+					if ( !MutationInterceptorsCache.hasListeners() ) return exec();
 					// --------------
 					// Obtain outgoingNodes and incomingNodes
 					let outgoingNodes = [], incomingNodes = [], target = this;
@@ -269,6 +273,8 @@ export default class Mutations {
 					let exec = () => originalApis[ apiName ].set.call( this, value );
 					// Instance of Node interface? Abort!
 					if ( !( this instanceof Element ) ) return exec();
+					// Bail out early
+					if ( !MutationInterceptorsCache.hasListeners() ) return exec();
 					// --------------
 					// Obtain outgoingNodes and incomingNodes
 					let outgoingNodes = [], incomingNodes = [], target = this;
@@ -425,12 +431,12 @@ function emit( context, record, trap ) {
  * 
  * @param Array 			targets 
  * @param Array 			sources 
- * @param Bool 				deep 
+ * @param Bool 				deepIntersect 
  * @param Function 			filter 
  * 
  * @returns 
  */
-function intersectNodes( targets, sources, deep = true, filter = null ) {
+function intersectNodes( targets, sources, deepIntersect = true, filter = null ) {
 	sources = Array.isArray( sources ) ? sources : [ ...sources ];
 	const match = ( sources, target ) => {
 		// Filter out text nodes
@@ -439,7 +445,7 @@ function intersectNodes( targets, sources, deep = true, filter = null ) {
 			// Is directly mutated...
 			let matches = sources.filter( source => source.matches( target ) && ( !filter || filter( source ) ) );
 			// Is contextly mutated...
-			if ( deep !== false ) {
+			if ( deepIntersect !== false ) {
 				matches = sources
 					.reduce( ( collection, source ) => {
 						let result = source.querySelectorAll( target );
@@ -453,7 +459,7 @@ function intersectNodes( targets, sources, deep = true, filter = null ) {
 		} else {
 			// Is directly mutated...
 			if ( sources.includes( target )
-			|| ( deep !== false && sources.some( source => source.contains( target ) ) ) ) {
+			|| ( deepIntersect !== false && sources.some( source => source.contains( target ) ) ) ) {
 				if ( !filter || filter( target ) ) {
 					return [ target ];
 				}
