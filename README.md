@@ -6,6 +6,8 @@
 
 <!-- /BADGES -->
 
+## Download
+
 **_Use as an npm package:_**
 
 ```bash
@@ -49,6 +51,9 @@ ready( () => {
 React to realtime DOM operations.
 
 ### Method: `Realtime.observe()`
+
+> `Realtime.observe( context, callback[, params = {} ])`
+> `Realtime.observe( context, targets, callback[, params = {} ])`
 
 A beautiful abstraction over the awful [MutationObserver](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) API!
 
@@ -94,12 +99,56 @@ document.querySelector( 'div' ).remove();
 ```
 
 ```js
-function logMutationRecord( record ) {
-    console.log( record.target, record.addedNodes, record.removedNodes, record.type );
+function logMutationRecord( record, context ) {
+    // Note...
+    console.log( record.target, record.addedNodes, record.removedNodes, record.type === 'mutation-record' );
+}
+```
+
+### Method: `Realtime.match()`
+
+> `Realtime.match( context, callback[, params = {} ])`
+> `Realtime.match( context, targets, callback[, params = {} ])`
+
+A dual-purpose method that both delivers an immediately-evaluated result and keeps it live by employing `Realtime.observe()` under the hood.
+
+```js
+// An exact alias for Realtime.observe() being that no target is specified
+Realtime.match( document, logMutationRecord, { subtree: true } );
+```
+
+```js
+// Deliver all current "p" elements and keep subsequent mutations to "p" elements observed
+Realtime.match( document, 'p', logMutationRecord, { subtree: true } );
+```
+
+```js
+// Match element instances too (e.g. a "p" instance)...
+const p = document.createElement( 'p' );
+Realtime.match( document, [ p, orCssSelector ], logMutationRecord, { subtree: true } );
+// But "p" doesn't match as a node connected to the context (document in this case)
+// and so isn't delivered
+
+// But it's caught by the observer
+const div = document.createElement( 'div' );
+div.appendChild( p );
+document.body.appendChild( div );
+```
+
+```js
+function logMutationRecord( record, context ) {
+    // Depending on record.type
+    // Note the record.connectedNodes and record.disconnectedNodes arrays
+    console.log( record.target, record.connectedNodes, record.disconnectedNodes, record.type === 'query-record' );
+    // Note the record.addedNodes and record.removedNodes arrays
+    console.log( record.target, record.addedNodes, record.removedNodes, record.type === 'mutation-record' );
 }
 ```
 
 ### Method: `Realtime.intercept()`
+
+> `Realtime.intercept( context, callback[, params = {} ])`
+> `Realtime.intercept( context, targets, callback[, params = {} ])`
 
 An ahead-of-time mutation observer API that intercepts DOM operations before they happen. This is much like `Realtime.observe()` but with a remarkable difference: timing! This captures mutations that *are about to happen*, while the former captures mutations that *have just happened*!
 
@@ -147,9 +196,9 @@ document.querySelector( 'div' ).remove();
 ```
 
 ```js
-function logInterceptionRecord( record ) {
+function logInterceptionRecord( record, context ) {
     // Note the record.incomingNodes and record.outgoingNodes arrays
-    console.log( record.target, record.incomingNodes, record.outgoingNodes, record.type );
+    console.log( record.target, record.incomingNodes, record.outgoingNodes, record.type === 'interception-record' );
 }
 ```
 
@@ -199,6 +248,10 @@ function logInterceptionRecord( record ) {
     
     (Responsibly) Monkeying with the DOM for polyfill development is a norm. But you may need to consider this caveat carefully in your specific usecases.
 
++ With each of the three APIs, it is possible to opt in to either just the "connected", "added", "incoming" nodes or to just the "disconnected", "removed", "outgoing" nodes. You'd use the `params.on` property.
+    + `params.on: 'connected'` - only records for "connected", "added", "incoming" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
+    + `params.on: 'disconnected'` - only records for "disconnected", "removed", "outgoing" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
+
 ## Reflow
 
 Eliminate layout thrashing by batching DOM read/write operations. (Compare [fastdom](https://github.com/wilsonpage/fastdom))
@@ -236,6 +289,8 @@ The `Reflow` API works as a regulatory layer between your app/library and the DO
 
 ### Method: `Reflow.onread()`
 
+> `Reflow.onread( onread[, inPromiseMode = false ])`
+
 Schedules a job for the "read" phase. Can return a promise that resolves when eventually executed; you ask for a promise by giving `true` as a second argument.
 
 ```js
@@ -245,6 +300,8 @@ const promise = Reflow .onread( () => {
 ```
 
 ### Method: `Reflow.onwrite()`
+
+> `Reflow.onwrite( onwrite[, inPromiseMode = false ])`
 
 Schedules a job for the "write" phase. Can return a promise that resolves when eventually executed; you ask for a promise by giving `true` as a second argument.
 
@@ -256,9 +313,9 @@ const promise = Reflow .onwrite( () => {
 
 ### Method: `Reflow.cycle()`
 
-Puts your read/write operations in a cycle that keeps in sync with your UI's read/write phases.
-
 > `Reflow.cycle( onread, onwrite )`
+
+Puts your read/write operations in a cycle that keeps in sync with your UI's read/write phases.
 
 ```js
 Reflow.cycle(
