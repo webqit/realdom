@@ -10,52 +10,97 @@
 npm i @webqit/dom
 ```
 
+**_Use as an npm package:_**
+
 ```js
+// Import
 import init from '@webqit/dom';
 
+// Initialize the lib
 init.call( window );
 
-const { dom, MutationObserver, Reflow } = window.wq;
+// Obtain the APIs
+const { ready, Realtime, Reflow } = window.wq.dom;
+```
+
+**_Use as a script:_**
+
+```html
+<script src="https://unpkg.com/@webqit/dom/dist/main.js"></script>
+```
+
+```js
+// Obtain the APIs
+const { ready, Realtime, Reflow } = window.wq.dom;
 ```
 
 ## Document-Ready Method
 
 ```js
-dom.ready( () => {
+ready( () => {
+    console.log();
 } );
 ```
 
 ## Realtime
 
-### `MutationObserver.observe()`
+### `Realtime.observe()`
+
+A beautiful abstraction over the awful [MutationObserver](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) API!
 
 ```js
-const logMutations = record => {
-    console.log( record.target, record.addedNodes, record.removedNodes, record.type );
-}
+// Capture all elements being added or removed, within the document context
+Realtime.observe( document, logMutationRecord, { subtree: true } );
 ```
 
 ```js
 // Capture all "p" elements being added or removed, within the document context
-MutationObserver.observe( document, 'p', logMutations, { subtree: true } );
+Realtime.observe( document, 'p', logMutationRecord, { subtree: true } );
 ```
 
-### `MutationObserver.intercept()`
+```js
+// Capture element instances being added or removed, within the document context
+const p = document.createElement( 'p' );
+Realtime.observe( document, [p], logMutationRecord, { subtree: true } );
+document.querySelector( 'div' ).appendChild( p );
+```
 
 ```js
-const logInterceptions = record => {
-    console.log( record.target, record.incomingNodes, record.outgoingNodes, record.type );
+function logMutationRecord( record ) {
+    console.log( record.target, record.addedNodes, record.removedNodes, record.type );
 }
+```
+
+### `Realtime.intercept()`
+
+An ahead-of-time mutation observer API that intercepts DOM operations before they happen.
+
+```js
+// Capture all elements BEFORE they are added or removed, within the document context
+Realtime.intercept( document, logInterceptionRecord, { subtree: true } );
 ```
 
 ```js
 // Capture all "p" elements BEFORE they are added or removed, within the document context
-MutationObserver.intercept( document, 'p', logInterceptions, { subtree: true } );
+Realtime.intercept( document, 'p', logInterceptionRecord, { subtree: true } );
 ```
 
-## Documentation
+```js
+// Capture element instances BEFORE they are added or removed, within the document context
+const p = document.createElement( 'p' );
+Realtime.intercept( document, [p], logInterceptionRecord, { subtree: true } );
+document.querySelector( 'div' ).appendChild( p );
+```
 
-Coming Soon.
+```js
+function logInterceptionRecord( record ) {
+    console.log( record.target, record.incomingNodes, record.outgoingNodes, record.type );
+}
+```
+
+## Reflow
+
+Docs Coming Soon.
 
 ## Issues
 

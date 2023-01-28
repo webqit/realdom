@@ -18,7 +18,7 @@ import { _from as _arrFrom } from '@webqit/util/arr/index.js';
 const wq = {};
 wq.apiMutationsBindings = [ new Map, new Map, ];
 wq.apiMutationsBindings.hasListeners = () => wq.apiMutationsBindings.some( x => x.size );
-export default window => class MutationObserver {
+export default window => class Realtime {
 
 	/**
 	 * Observes changes in attributes of the given element.
@@ -27,7 +27,7 @@ export default window => class MutationObserver {
 	 * @param array						filter
 	 * @param function					callback
 	 *
-	 * @return MutationObserver
+	 * @return Realtime
 	 */
 	attr( context, filter, callback ) {
 		[ context, filter, callback ] = resolveArgs( arguments );

@@ -21,11 +21,11 @@ const doc = ( body = '', head = '', callback = null ) => {
         beforeParse( window ) {
             window.testRecords = [];
             init.call( window );
-            if ( callback ) callback( window, window.wq );
+            if ( callback ) callback( window, window.wq.dom );
         }
     } );
     // --------
-    return [ instance.window, instance.window.wq ];
+    return [ instance.window, instance.window.wq.dom ];
 };
 
 const delay = dur => new Promise( res => setTimeout( res, dur ) );
@@ -45,14 +45,13 @@ describe(`Test: observer`, function() {
             </script>
             <div><p>Hello World!</p></div>`;
 
-            const [ window ] = doc( body, '', ( window, { MutationObserver } ) => {
+            const [ window ] = doc( body, '', ( window, { Realtime } ) => {
                 // Observer is bound before document is parsed.
                 // Elements are going to show up as they are being parsed.
-                MutationObserver.observe( window.document, 'h1,p', record => {
+                Realtime.observe( window.document, 'h1,p', record => {
                     window.testRecords.push( record.addedNodes[ 0 ] );
                 }, { subtree: true } );
             } );
-
 
             await delay( 600 );
             expect( window.testRecords ).to.have.length( 3 );
@@ -64,17 +63,16 @@ describe(`Test: observer`, function() {
                 testRecords.push( this );
             </script>`;
 
-            const [ window ] = doc( body, '', ( window, { MutationObserver } ) => {
+            const [ window ] = doc( body, '', ( window, { Realtime } ) => {
                 // Observer is bound before document is parsed.
                 // Elements are going to show up as they are being parsed.
-                MutationObserver.intercept( window.document, 'script[scoped]', record => {
+                Realtime.intercept( window.document, 'script[scoped]', record => {
                     const script = record.incomingNodes[ 0 ];
                     script.textContent = `(function() {
                         ${ script.textContent }
                     }).call( document.currentScript.parentNode );`;
                 }, { subtree: true } );
             } );
-
 
             await delay( 600 );
             expect( window.testRecords ).to.have.length( 1 );

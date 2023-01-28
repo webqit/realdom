@@ -4,7 +4,7 @@
  */
 import { _isNumeric } from '@webqit/util/js/index.js';
 import { _set, _get, _merge } from '@webqit/util/obj/index.js';
-import createMutationObserverClass from './MutationObserver.js';
+import createRealtimeClass from './Realtime.js';
 import createReflowClass from './Reflow.js';
 import polyfill from './polyfills.js';
 
@@ -16,10 +16,10 @@ export default function() {
     polyfill.call( window );
     // ------
     const Reflow = createReflowClass( window );
-    window.wq.Reflow = new Reflow;
+    window.wq.dom.Reflow = new Reflow;
     // ------
-    const MutationObserver = createMutationObserverClass( window );
-    window.wq.MutationObserver = new MutationObserver;
+    const Realtime = createRealtimeClass( window );
+    window.wq.dom.Realtime = new Realtime;
     // ------
     window.wq.dom.ready = ready.bind( window );
     window.wq.dom.meta = meta.bind( window );
