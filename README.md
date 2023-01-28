@@ -201,11 +201,83 @@ function logInterceptionRecord( record ) {
 
 ## Reflow
 
-Docs Coming Soon.
+liminate layout thrashing by batching DOM read/write operations. (Compare [fastdom](https://github.com/wilsonpage/fastdom))
 
 ## Issues
 
 To report bugs or request features, please submit an [issue](https://github.com/webqit/dom/issues).
+
+```js
+Reflow.onread( () => {
+  console.log( 'reading phase of the UI' );
+} );
+
+Reflow.onwrite( () => {
+  console.log( 'writing phase of the UI' );
+} );
+
+Reflow.onread( () => {
+  console.log( 'reading phase of the UI'  );
+} );
+
+Reflow.onwrite( () => {
+  console.log( 'writing phase of the UI'  );
+} );
+```
+
+```
+reading phase of the UI
+reading phase of the UI
+writing phase of the UI
+writing phase of the UI
+```
+
+### *Concept*
+
+The `Reflow` API works as a regulatory layer between your app/library and the DOM. It lets you think of the DOM in terms of a "reading" phase and a "writing" phase, and lets you hook into this cycle when working with the DOM: `onread()` for doing "read" operations, and `onwrite` for doing "write" operations. Batching DOM operations this way lets us avoid unnecessary document reflows and dramatically speed up layout performance.
+
+> Each read/write operation is added to a corresponding read/write queue. The queues are emptied (reads, then writes) at the turn of the next frame using `window.requestAnimationFrame`.
+
+### `Reflow.onread()`
+
+Schedules a job for the "read" phase. Can return a promise that resolves when eventually executed; you ask for a promise by giving `true` as a second argument.
+
+```js
+const promise = Reflow .onread( () => {
+  const width = element.clientWidth;
+}, true/*give back a promise*/ );
+```
+
+### `Reflow.onwrite()`
+
+Schedules a job for the "write" phase. Can return a promise that resolves when eventually executed; you ask for a promise by giving `true` as a second argument.
+
+```js
+const promise = Reflow .onwrite( () => {
+  element.style.width = width + 'px';
+}, true/*give back a promise*/ );
+```
+
+### `Reflow.cycle()`
+
+Puts your read/write operations in a cycle that keeps in sync with your UI's read/write phases.
+
+> `Reflow.cycle( onread, onwrite )`
+
+```js
+Reflow.cycle(
+    () => {
+        const width = element.clientWidth;
+        // if we return anything other than undefined, the "onwrite" callback is called
+        return width; // recieved by the "onwrite" callback on its first parameter
+    },
+    ( width, carried ) => {
+        element.style.width = width + 'px';
+        // if we return anything other than undefined, the cycle repeats
+        return newCarry; // recieved by the "onwrite" callback again on its second parameter: "carried"
+    }
+);
+```
 
 ## License
 
