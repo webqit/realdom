@@ -53,6 +53,7 @@ React to realtime DOM operations.
 ### Method: `Realtime.observe()`
 
 > `Realtime.observe( context, callback[, params = {} ])`
+
 > `Realtime.observe( context, targets, callback[, params = {} ])`
 
 A beautiful abstraction over the awful [MutationObserver](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) API!
@@ -108,6 +109,7 @@ function logMutationRecord( record, context ) {
 ### Method: `Realtime.match()`
 
 > `Realtime.match( context, callback[, params = {} ])`
+
 > `Realtime.match( context, targets, callback[, params = {} ])`
 
 A dual-purpose method that both delivers an immediately-evaluated result and keeps it live by employing `Realtime.observe()` under the hood.
@@ -148,6 +150,7 @@ function logMutationRecord( record, context ) {
 ### Method: `Realtime.intercept()`
 
 > `Realtime.intercept( context, callback[, params = {} ])`
+
 > `Realtime.intercept( context, targets, callback[, params = {} ])`
 
 An ahead-of-time mutation observer API that intercepts DOM operations before they happen. This is much like `Realtime.observe()` but with a remarkable difference: timing! This captures mutations that *are about to happen*, while the former captures mutations that *have just happened*!
