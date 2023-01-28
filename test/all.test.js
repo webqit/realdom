@@ -5,8 +5,9 @@
 import { expect } from 'chai';
 import jsdom from 'jsdom';
 import init from '../src/index.js';
+import { runInContext, createContext } from 'vm';
 
-const doc = ( body = '', head = '', callback = null ) => {
+const doc = ( body = '', head = '', callback = null, params = {} ) => {
     // -------
     const skeletonDoc = `
     <!DOCTYPE html>
@@ -17,10 +18,19 @@ const doc = ( body = '', head = '', callback = null ) => {
     // --------
     const instance  = new jsdom.JSDOM( skeletonDoc, {
         url: 'http://localhost',
-        runScripts: 'dangerously',
+        ...params,
         beforeParse( window ) {
+
             window.testRecords = [];
             init.call( window );
+
+            // Run scripts
+            createContext( window );
+            window.scopedJs = {
+                exec: script => { runInContext( script.textContent, window ); },
+                scripts: [],
+            }
+
             if ( callback ) callback( window, window.wq.dom );
         }
     } );
@@ -51,9 +61,9 @@ describe(`Test: observer`, function() {
                 Realtime.observe( window.document, 'h1,p', record => {
                     window.testRecords.push( record.addedNodes[ 0 ] );
                 }, { subtree: true } );
-            } );
+            }, { runScripts: 'dangerously' } );
 
-            await delay( 600 );
+            await delay( 60 );
             expect( window.testRecords ).to.have.length( 3 );
         });
 
@@ -68,15 +78,19 @@ describe(`Test: observer`, function() {
                 // Elements are going to show up as they are being parsed.
                 Realtime.intercept( window.document, 'script[scoped]', record => {
                     const script = record.incomingNodes[ 0 ];
+                    window.scopedJs.scripts[0] = script;
                     script.textContent = `(function() {
                         ${ script.textContent }
-                    }).call( document.currentScript.parentNode );`;
+                    }).call( window.scopedJs.scripts[0].parentNode );`;
+                    if ( window.scopedJs.exec ) {
+                        window.scopedJs.exec( script );
+                    }
                 }, { subtree: true } );
             } );
 
-            await delay( 600 );
+            await delay( 60 );
             expect( window.testRecords ).to.have.length( 1 );
-            //expect( window.testRecords[ 0 ] ).to.eq( window.document.body );
+            expect( window.testRecords[ 0 ] ).to.eq( window.document.body );
         });
 
     });

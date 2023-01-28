@@ -217,7 +217,7 @@ function logInterceptionRecord( record, context ) {
 
 + The `Realtime` API is designed for the consistency and predictability that the native `MutationObserver` API lacks for certain usecases.
 
-    For example, bind a mutation observer - with `{subtree: true}` - to the `document` object before page parsing begins, and you'd see all elements are announced:
+    For example, bind a mutation observer - with `{subtree: true}` - to the `document` object before page parsing begins, and you'd see that all elements are announced:
     
     ```html
     <html>
@@ -236,7 +236,7 @@ function logInterceptionRecord( record, context ) {
     </html>
     ```
     
-    But try adding an equivalent DOM structures programmatically - e.g. `<div><p></p></div>` - and you'd see nested elements (`p`) aren't caught:
+    But try adding an equivalent DOM structure programmatically - e.g. `<div><p></p></div>` - and you'd see that nested elements (`p`) aren't caught:
     
     ```js
     const div = document.createElement( 'div' );
