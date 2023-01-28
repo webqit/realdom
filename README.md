@@ -205,6 +205,8 @@ function logInterceptionRecord( record, context ) {
 }
 ```
 
+---------------------------
+
 **_Some niceties_**
 
 + The `Realtime` API is designed for the consistency and predictability that the native `MutationObserver` API lacks for certain usecases.
