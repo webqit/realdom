@@ -6,11 +6,11 @@
 
 <!-- /BADGES -->
 
+**_Use as an npm package:_**
+
 ```bash
 npm i @webqit/dom
 ```
-
-**_Use as an npm package:_**
 
 ```js
 // Import
