@@ -41,9 +41,9 @@ const { ready, Realtime, Reflow } = window.wq.dom;
 Know when the document is ready.
 
 ```js
-ready( () => {
-    console.log();
-} );
+ready(() => {
+    console.log( 'Document is ready' );
+});
 ```
 
 ## Realtime
@@ -73,7 +73,7 @@ document.body.innerHTML = '<div><p></p></div>';
 // or added programmatically...
 const p = document.createElement( 'p' );
 const div = document.createElement( 'div' );
-//  and deeply nested (as per { subtree: true })
+// and deeply nested (as per { subtree: true })
 div.appendChild( p );
 document.body.appendChild( div );
 ```
@@ -101,7 +101,7 @@ document.querySelector( 'div' ).remove();
 
 ```js
 function logMutationRecord( record, context ) {
-    // Note...
+    // Note the record.addedNodes and record.removedNodes arrays
     console.log( record.target, record.addedNodes, record.removedNodes, record.type === 'mutation-record' );
 }
 ```
@@ -112,15 +112,15 @@ function logMutationRecord( record, context ) {
 
 > `Realtime.match( context, targets, callback[, params = {} ])`
 
-A dual-purpose method that both delivers an immediately-evaluated result and keeps it live by employing `Realtime.observe()` under the hood.
+A dual-purpose method that both delivers the current matching result and keeps it live by employing `Realtime.observe()` under the hood.
 
 ```js
-// An exact alias for Realtime.observe() being that no target is specified
+// This becomes an exact alias for Realtime.observe() being that no targets are specified
 Realtime.match( document, logMutationRecord, { subtree: true } );
 ```
 
 ```js
-// Deliver all current "p" elements and keep subsequent mutations to "p" elements observed
+// Now, deliver all current "p" elements and keep subsequent mutations to "p" elements coming
 Realtime.match( document, 'p', logMutationRecord, { subtree: true } );
 ```
 
@@ -131,7 +131,7 @@ Realtime.match( document, [ p, orCssSelector ], logMutationRecord, { subtree: tr
 // But "p" doesn't match as a node connected to the context (document in this case)
 // and so isn't delivered
 
-// But it's caught by the observer
+// But it's caught by the observer when added to the context
 const div = document.createElement( 'div' );
 div.appendChild( p );
 document.body.appendChild( div );
@@ -153,7 +153,7 @@ function logMutationRecord( record, context ) {
 
 > `Realtime.intercept( context, targets, callback[, params = {} ])`
 
-An ahead-of-time mutation observer API that intercepts DOM operations before they happen. This is much like `Realtime.observe()` but with a remarkable difference: timing! This captures mutations that *are about to happen*, while the former captures mutations that *have just happened*!
+An ahead-of-time mutation observer API that intercepts DOM operations before they happen. This is much like `Realtime.observe()` but with a marked difference: timing! This captures mutations that *are about to happen*, while the former captures mutations that *have just happened*!
 
 > A good usecase is ahead.
 
@@ -172,7 +172,7 @@ document.body.innerHTML = '<div><p></p></div>';
 // or added programmatically...
 const p = document.createElement( 'p' );
 const div = document.createElement( 'div' );
-//  and deeply nested (as per { subtree: true })
+// and deeply nested (as per { subtree: true })
 div.appendChild( p );
 document.body.appendChild( div );
 ```
@@ -211,7 +211,7 @@ function logInterceptionRecord( record, context ) {
 
 + The `Realtime` API is designed for the consistency and predictability that the native `MutationObserver` API lacks for certain usecases.
 
-    For example, bind a mutation observer - with `{subtree: true}` - to the `document` object before page parsing begins, and all elements are announced:
+    For example, bind a mutation observer - with `{subtree: true}` - to the `document` object before page parsing begins, and you'd see all elements are announced:
     
     ```html
     <html>
@@ -230,7 +230,7 @@ function logInterceptionRecord( record, context ) {
     </html>
     ```
     
-    But programmatically add an equivalent DOM structures - e.g. `<div><p></p></div>` - and nested elements (`p`) aren't caught:
+    But try adding an equivalent DOM structures programmatically - e.g. `<div><p></p></div>` - and you'd see nested elements (`p`) aren't caught:
     
     ```js
     const div = document.createElement( 'div' );
@@ -239,7 +239,7 @@ function logInterceptionRecord( record, context ) {
     document.body.appendChild( div );
     ```
     
-    By contrast, the `Realtime` API is consistent with `{ subtree: true }` whatever the case!
+    By contrast, the `Realtime` API is consistent with `{ subtree: true }` in all cases!
     
 + The `Realtime.intercept()` API is designed for the rare possiblity of intercepting elements before they're handled natively by the browser. This lets you build tools that extend the DOM in more low-level ways. For example, you could [intercept and rewrite `<script>` elements](https://github.com/webqit/oohtml#scoped-js) before they're parsed and executed.
 
@@ -251,9 +251,9 @@ function logInterceptionRecord( record, context ) {
     + `Element`: `insertAdjacentElement`, `insertAdjacentHTML`, `setHTML`, `replaceChildren`, `replaceWith`, `remove`. `before`, `after`, `append`, `prepend`.
     + `HTMLElement`: `outerText`, `innerText`.
     
-    (Responsibly) Monkeying with the DOM for polyfill development is a norm. But you may need to consider this caveat carefully in your specific usecases.
+    Point is: monkeying (responsibly) with the DOM for polyfill development is a norm. But you may need to consider this caveat carefully in your specific usecases.
 
-+ With each of the three APIs, it is possible to opt in to either just the "connected", "added", "incoming" nodes or to just the "disconnected", "removed", "outgoing" nodes. You'd use the `params.on` property.
++ With each of the three APIs, it is possible to opt in to either just the "connected", "added", "incoming" records or to just the "disconnected", "removed", "outgoing" records. You'd use the `params.on` property:
     + `params.on: 'connected'` - only records for "connected", "added", "incoming" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
     + `params.on: 'disconnected'` - only records for "disconnected", "removed", "outgoing" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
 
@@ -296,7 +296,7 @@ The `Reflow` API works as a regulatory layer between your app/library and the DO
 
 > `Reflow.onread( onread[, inPromiseMode = false ])`
 
-Schedules a job for the "read" phase. Can return a promise that resolves when eventually executed; you ask for a promise by giving `true` as a second argument.
+Schedules a job for the "read" phase. Can return a promise that resolves when job eventually executes; you ask for a promise by supplying `true` as a second argument.
 
 ```js
 const promise = Reflow .onread( () => {
@@ -308,7 +308,7 @@ const promise = Reflow .onread( () => {
 
 > `Reflow.onwrite( onwrite[, inPromiseMode = false ])`
 
-Schedules a job for the "write" phase. Can return a promise that resolves when eventually executed; you ask for a promise by giving `true` as a second argument.
+Schedules a job for the "write" phase. Can return a promise that resolves when job eventually executes; you ask for a promise by supplying `true` as a second argument.
 
 ```js
 const promise = Reflow .onwrite( () => {
@@ -320,19 +320,23 @@ const promise = Reflow .onwrite( () => {
 
 > `Reflow.cycle( onread, onwrite )`
 
-Puts your read/write operations in a cycle that keeps in sync with your UI's read/write phases.
+Puts your read/write operations in a cycle that keeps in sync with the UI's read/write phases.
 
 ```js
 Reflow.cycle(
+    // onread
     () => {
+        // Do a read operation
         const width = element.clientWidth;
-        // if we return anything other than undefined, the "onwrite" callback is called
+        // And if we return anything other than undefined, the "onwrite" block is executed
         return width; // recieved by the "onwrite" callback on its first parameter
     },
+    // onwrite
     ( width, carried ) => {
+        // Do a write operation
         element.style.width = width + 'px';
-        // if we return anything other than undefined, the cycle repeats
-        return newCarry; // recieved by the "onwrite" callback again on its second parameter: "carried"
+        // And if we return anything other than undefined, the cycle repeats starting with the "onread" block
+        return newCarry; // recieved by the "onwrite" block again on its second parameter: "carried"
     }
 );
 ```

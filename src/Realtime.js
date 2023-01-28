@@ -59,17 +59,18 @@ export default window => class Realtime {
 			if ( !records.has( target ) ) {
 				records.set( target, {
 					target, 
-					addedNodes: [], 
-					removedNodes: [],
+					connectedNodes: [], 
+					disconnectedNodes: [],
+					type: 'query-record',
 				} );
 			}
 			return records.get( target );
 		};
 		// ------------------
 		if ( selectors.every( selector => _isString( selector ) ) && ( selectors = selectors.join( ',' ) ) ) {
-			if ( params.on !== 'disconnected' ) {
+			if ( !params.on || params.on === 'connected' ) {
 				( params.subtree ? context.querySelectorAll( selectors ) : context.children || [] ).forEach( node => {
-					getRecord( node.parentNode ).addedNodes.push( node );
+					getRecord( node.parentNode ).connectedNodes.push( node );
 				} );
 			}
 		} else if ( selectors.every( selector => _isObject( selector ) ) ) {
@@ -78,8 +79,9 @@ export default window => class Realtime {
 					const isConnected = context === document ? node.isConnected : (
 						node.parentNode === context || ( params.subtree && context.contains( node ) )
 					);
-					if ( ( params.on === 'connected' && !isConnected ) || ( params.on === 'disconnected' && isConnected ) ) return;
-					getRecord( node.parentNode )[ isConnected ? 'addedNodes' : 'removedNodes' ].push( node );
+					if ( ( ( !params.on || params.on === 'connected' ) && isConnected ) || ( params.on === 'disconnected' && !isConnected ) ) {
+						getRecord( node.parentNode )[ isConnected ? 'connectedNodes' : 'disconnectedNodes' ].push( node );
+					}
 				} );
 			}
 		}
@@ -125,7 +127,7 @@ export default window => class Realtime {
 					target,
 					addedNodes,
 					removedNodes,
-					type: 'mutation-observer',
+					type: 'mutation-record',
 				}/*!important*/, {
 					selectors,
 					callback,
@@ -179,7 +181,7 @@ export default window => class Realtime {
 					contexts.forEach( ( traps, context ) => {
 						if ( !( record.target === context || ( index && ( context === document && record.target.isConnected || context.contains( record.target ) ) ) ) ) return;
 						traps.forEach( trap => {
-							if ( record.type === 'mutation-observer' ) {
+							if ( record.type === 'mutation-record' ) {
 								// Parse-based events are finegrained and should not be deep-intersected
 								trap = { ...trap, params: { ...trap.params, deepIntersect: false/* non-overridable */ } };
 							} else {
@@ -440,7 +442,7 @@ function bindToApiMutations( window, callback ) {
 				}
 			}
 			// --------------
-			intercept( { target, incomingNodes, outgoingNodes, type: 'mutation-interception', event: [ this, apiName ] } );
+			intercept( { target, incomingNodes, outgoingNodes, type: 'interception-record', event: [ this, apiName ] } );
 			// --------------
 			return originalApis[ apiNameFinal ].call( this, ...args );
 		}
@@ -495,7 +497,7 @@ function bindToApiMutations( window, callback ) {
 				}
 			}
 			// -------------- 
-			intercept( { target, incomingNodes, outgoingNodes, type: 'mutation-interception', event: [ this, apiName ] } );
+			intercept( { target, incomingNodes, outgoingNodes, type: 'interception-record', event: [ this, apiName ] } );
 			// -------------- 
 			return exec();
 		} } );
@@ -510,7 +512,7 @@ function bindToApiMutations( window, callback ) {
 				target: document,
 				incomingNodes: args,
 				outgoingNodes: [],
-				type: 'mutation-interception', 
+				type: 'interception-record', 
 				event: [ document, apiName ]
 			} );
 			return originalApi.call( this || document, ...args );
