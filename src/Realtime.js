@@ -373,7 +373,7 @@ function bindToApiMutations( window, callback ) {
 	[
 		'insertBefore'/*Node*/, 'insertAdjacentElement', 'insertAdjacentHTML', 'setHTML',
 		'replaceChildren', 'replaceWith', 'remove', 'replaceChild'/*Node*/, 'removeChild'/*Node*/, 
-		'before', 'after', 'append', 'prepend', 'appendChild'/*Node*/, 'prependChild', 
+		'before', 'after', 'append', 'prepend', 'appendChild'/*Node*/, 
 	].forEach( apiName => {
 		// We'll be sure to monkey the correct interface
 		const Interface = [ 'insertBefore', 'replaceChild', 'removeChild', 'appendChild' ].includes( apiName ) ? Node : Element;
@@ -410,7 +410,7 @@ function bindToApiMutations( window, callback ) {
 			} else if ( ['removeChild' ].includes( apiName ) ) {
 				outgoingNodes = [ ...args ];
 			} else {
-				// 'before', 'after', 'append', 'prepend', 'appendChild', 'prependChild'
+				// 'before', 'after', 'append', 'prepend', 'appendChild'
 				incomingNodes = [ ...args ];
 				if ( [ 'before', 'after' ].includes( apiName ) ) {
 					target = this.parentNode;
