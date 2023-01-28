@@ -205,7 +205,7 @@ function logInterceptionRecord( record, context ) {
 }
 ```
 
-### *Some niceties*
+**_Some niceties_**
 
 + The `Realtime` API is designed for the consistency and predictability that the native `MutationObserver` API lacks for certain usecases.
 
@@ -241,7 +241,7 @@ function logInterceptionRecord( record, context ) {
     
 + The `Realtime.intercept()` API is designed for the rare possiblity of intercepting elements before they're handled natively by the browser. This lets you build tools that extend the DOM in more low-level ways. For example, you could [intercept and rewrite `<script>` elements](https://github.com/webqit/oohtml#scoped-js) before they're parsed and executed.
 
-### *Some notes*
+**_Some notes_**
 
 + The `Realtime` API is able to do the extra-ordinary by going a bit extra-ordinary: by literally intercepting DOM APIs. And here are the complete list of them:
     
@@ -284,7 +284,7 @@ writing phase of the UI
 writing phase of the UI
 ```
 
-### *Concept*
+**_Concept_**
 
 The `Reflow` API works as a regulatory layer between your app/library and the DOM. It lets you think of the DOM in terms of a "reading" phase and a "writing" phase, and lets you hook into this cycle when working with the DOM: `onread()` for doing "read" operations, and `onwrite` for doing "write" operations. Batching DOM operations this way lets us avoid unnecessary document reflows and dramatically speed up layout performance.
 
