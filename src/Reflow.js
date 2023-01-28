@@ -110,39 +110,37 @@ export default window => class Reflow {
 	 *
 	 * @return void|mixed
 	 */
-	cycle( read, write, prevTransaction ) {
+	cycle( onread, onwrite, prevTransaction ) {
 		this.onread( () => {
 			// Record initial values
-			var readReturn = read( prevTransaction );
-			if ( readReturn ) {
-				// Call erite, the transation
-				var callWrite = ( readReturn ) => {
-					this.onwrite( () => {
-						var writeReturn = write( readReturn, prevTransaction );
-						if ( writeReturn ) {
-							// Repeat transaction
-							var repeatTransaction = ( writeReturn ) => {
-								this.cycle( read, write, writeReturn );
-							};
-							// ---------------------------------------
-							// If "write" returns a promise, we wait until it is resolved
-							// ---------------------------------------
-							if ( writeReturn instanceof Promise ) {
-								writeReturn.then( repeatTransaction );
-							} else {
-								repeatTransaction();
-							}
-						}
-					});
-				};
-				// ---------------------------------------
-				// If "read" returns a promise, we wait until it is resolved
-				// ---------------------------------------
-				if ( readReturn instanceof Promise ) {
-					readReturn.then( callWrite );
-				} else {
-					callWrite();
-				}
+			const readReturn = onread( prevTransaction );
+			// Call erite, the transation
+			const callWrite = ( readReturn ) => {
+				if ( readReturn === undefined ) return;
+				this.onwrite( () => {
+					const writeReturn = onwrite( readReturn, prevTransaction );
+					// Repeat transaction
+					const repeatTransaction = ( writeReturn ) => {
+						if ( writeReturn === undefined ) return;
+						this.cycle( onread, onwrite, writeReturn );
+					};
+					// ---------------------------------------
+					// If "write" returns a promise, we wait until it is resolved
+					// ---------------------------------------
+					if ( writeReturn instanceof Promise ) {
+						writeReturn.then( repeatTransaction );
+					} else {
+						repeatTransaction( writeReturn );
+					}
+				} );
+			};
+			// ---------------------------------------
+			// If "read" returns a promise, we wait until it is resolved
+			// ---------------------------------------
+			if ( readReturn instanceof Promise ) {
+				readReturn.then( callWrite );
+			} else {
+				callWrite( readReturn );
 			}
 		} );
 	}
