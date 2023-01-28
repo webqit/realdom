@@ -209,6 +209,12 @@ function logInterceptionRecord( record, context ) {
 
 **_Some niceties_**
 
++ With each of the three APIs, it is possible to opt in to either just the "connected", "added", "incoming" records or to just the "disconnected", "removed", "outgoing" records. You'd use the `params.on` property:
+    + `params.on: 'connected'` - only records for "connected", "added", "incoming" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
+    + `params.on: 'disconnected'` - only records for "disconnected", "removed", "outgoing" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
+
++ With each of the three APIs, omiting the `{ subtree: true }` setting  would mean that deeply nested targets won't be searched for; only directly-mutated nodes will be evaluated.
+
 + The `Realtime` API is designed for the consistency and predictability that the native `MutationObserver` API lacks for certain usecases.
 
     For example, bind a mutation observer - with `{subtree: true}` - to the `document` object before page parsing begins, and you'd see all elements are announced:
@@ -252,10 +258,6 @@ function logInterceptionRecord( record, context ) {
     + `HTMLElement`: `outerText`, `innerText`.
     
     Point is: monkeying (responsibly) with the DOM for polyfill development is a norm. But you may need to consider this caveat carefully in your specific usecases.
-
-+ With each of the three APIs, it is possible to opt in to either just the "connected", "added", "incoming" records or to just the "disconnected", "removed", "outgoing" records. You'd use the `params.on` property:
-    + `params.on: 'connected'` - only records for "connected", "added", "incoming" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
-    + `params.on: 'disconnected'` - only records for "disconnected", "removed", "outgoing" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
 
 ## Reflow
 
@@ -328,14 +330,14 @@ Reflow.cycle(
     () => {
         // Do a read operation
         const width = element.clientWidth;
-        // And if we return anything other than undefined, the "onwrite" block is executed
+        // Now if we return anything other than undefined, the "onwrite" block is executed
         return width; // recieved by the "onwrite" callback on its first parameter
     },
     // onwrite
     ( width, carried ) => {
         // Do a write operation
         element.style.width = width + 'px';
-        // And if we return anything other than undefined, the cycle repeats starting with the "onread" block
+        // Now if we return anything other than undefined, the cycle repeats starting with the "onread" block
         return newCarry; // recieved by the "onwrite" block again on its second parameter: "carried"
     }
 );
