@@ -153,7 +153,7 @@ function logInterceptionRecord( record ) {
 }
 ```
 
-### Some niceties
+### *Some niceties*
 
 + The `Realtime` API is designed for the consistency and predictability that the native `MutationObserver` API lacks for certain usecases.
 
@@ -189,7 +189,7 @@ function logInterceptionRecord( record ) {
     
 + The `Realtime.intercept()` API is designed for the rare possiblity of intercepting elements before they're handled natively by the browser. This lets you build tools that extend the DOM in more low-level ways. For example, you could [intercept and rewrite `<script>` elements](https://github.com/webqit/oohtml#scoped-js) before they're parsed and executed.
 
-### Some notes
+### *Some notes*
 
 + The `Realtime` API is able to do the extra-ordinary by going a bit extra-ordinary: by literally intercepting DOM APIs. And here are the complete list of them:
     
