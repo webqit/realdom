@@ -48,7 +48,7 @@ ready( () => {
 
 React to realtime DOM operations.
 
-### `Realtime.observe()`
+### Method: `Realtime.observe()`
 
 A beautiful abstraction over the awful [MutationObserver](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) API!
 
@@ -99,7 +99,7 @@ function logMutationRecord( record ) {
 }
 ```
 
-### `Realtime.intercept()`
+### Method: `Realtime.intercept()`
 
 An ahead-of-time mutation observer API that intercepts DOM operations before they happen. This is much like `Realtime.observe()` but with a remarkable difference: timing! This captures mutations that *are about to happen*, while the former captures mutations that *have just happened*!
 
@@ -201,11 +201,7 @@ function logInterceptionRecord( record ) {
 
 ## Reflow
 
-liminate layout thrashing by batching DOM read/write operations. (Compare [fastdom](https://github.com/wilsonpage/fastdom))
-
-## Issues
-
-To report bugs or request features, please submit an [issue](https://github.com/webqit/dom/issues).
+Eliminate layout thrashing by batching DOM read/write operations. (Compare [fastdom](https://github.com/wilsonpage/fastdom))
 
 ```js
 Reflow.onread( () => {
@@ -238,7 +234,7 @@ The `Reflow` API works as a regulatory layer between your app/library and the DO
 
 > Each read/write operation is added to a corresponding read/write queue. The queues are emptied (reads, then writes) at the turn of the next frame using `window.requestAnimationFrame`.
 
-### `Reflow.onread()`
+### Method: `Reflow.onread()`
 
 Schedules a job for the "read" phase. Can return a promise that resolves when eventually executed; you ask for a promise by giving `true` as a second argument.
 
@@ -248,7 +244,7 @@ const promise = Reflow .onread( () => {
 }, true/*give back a promise*/ );
 ```
 
-### `Reflow.onwrite()`
+### Method: `Reflow.onwrite()`
 
 Schedules a job for the "write" phase. Can return a promise that resolves when eventually executed; you ask for a promise by giving `true` as a second argument.
 
@@ -258,7 +254,7 @@ const promise = Reflow .onwrite( () => {
 }, true/*give back a promise*/ );
 ```
 
-### `Reflow.cycle()`
+### Method: `Reflow.cycle()`
 
 Puts your read/write operations in a cycle that keeps in sync with your UI's read/write phases.
 
@@ -278,6 +274,10 @@ Reflow.cycle(
     }
 );
 ```
+
+## Issues
+
+To report bugs or request features, please submit an [issue](https://github.com/webqit/dom/issues).
 
 ## License
 
