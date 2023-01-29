@@ -50,11 +50,36 @@ ready(() => {
 
 React to realtime DOM operations.
 
+### Method: `Realtime.attr()`
+
+> `Realtime.attr( context, callback )`
+
+> `Realtime.attr( context, filter, callback )`
+
+A succinct attributes observer API that abstracts the [MutationObserver](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) API!
+
+```js
+// Observe all attributes that have been added or removed to/from the specified context ("div" in this case)
+Realtime.observe( div, logMutationRecord );
+```
+
+```js
+// Observe when the specified attributes are added or removed to/from the specified context ("div" in this case)
+Realtime.observe( div, [ 'contenteditable', 'data-state' ], logMutationRecord );
+```
+
+```js
+function logMutationRecord( record, context ) {
+    // Note the record.name and record.oldValue properties
+    console.log( record.target, record.name, record.oldValue, record.type === 'attribute-record' );
+}
+```
+
 ### Method: `Realtime.observe()`
 
 > `Realtime.observe( context, callback[, params = {} ])`
 
-> `Realtime.observe( context, targets, callback[, params = {} ])`
+> `Realtime.observe( context, filter, callback[, params = {} ])`
 
 A beautiful abstraction over the awful [MutationObserver](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) API!
 
@@ -110,7 +135,7 @@ function logMutationRecord( record, context ) {
 
 > `Realtime.match( context, callback[, params = {} ])`
 
-> `Realtime.match( context, targets, callback[, params = {} ])`
+> `Realtime.match( context, filter, callback[, params = {} ])`
 
 A dual-purpose method that both delivers the current matching result and keeps it live by employing `Realtime.observe()` under the hood.
 
@@ -151,7 +176,7 @@ function logMutationRecord( record, context ) {
 
 > `Realtime.intercept( context, callback[, params = {} ])`
 
-> `Realtime.intercept( context, targets, callback[, params = {} ])`
+> `Realtime.intercept( context, filter, callback[, params = {} ])`
 
 An ahead-of-time mutation observer API that intercepts DOM operations before they happen. This is much like `Realtime.observe()` but with a marked difference: timing! This captures mutations that *are about to happen*, while the former captures mutations that *have just happened*!
 
@@ -251,7 +276,7 @@ function logInterceptionRecord( record, context ) {
 
 **_Some notes_**
 
-+ The `Realtime` API is able to do the extra-ordinary by going a bit extra-ordinary: by literally intercepting DOM APIs. And here are the complete list of them:
++ The `Realtime` API is able to do the extra-ordinary by going a bit extra-ordinary: by literally intercepting DOM APIs. And here is the complete list of them:
     
     + `Node`: `insertBefore`, `replaceChild`, `removeChild`, `appendChild`, `textContent`, `nodeValue`.
     + `Element`: `insertAdjacentElement`, `insertAdjacentHTML`, `setHTML`, `replaceChildren`, `replaceWith`, `remove`. `before`, `after`, `append`, `prepend`.

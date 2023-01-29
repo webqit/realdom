@@ -32,12 +32,15 @@ export default window => class Realtime {
 	attr( context, filter, callback ) {
 		[ context, filter, callback ] = resolveArgs( arguments );
 		const mo = new window.MutationObserver( records => {
-			records.forEach( record => callback( record, context ) );
+			records.forEach( record => callback( {
+				target: record.target,
+				name: record.attributeName,
+				oldValue: record.oldValue,
+				type: 'attribute-record',
+			}, context ) );
 		} );
 		const params = { attributes: true, attributeOldValue: true };
-		if ( filter.length ) {
-			params.attributeFilter = filter;
-		}
+		if ( filter.length ) { params.attributeFilter = filter; }
 		mo.observe( context, params );
 		return mo;
 	}
