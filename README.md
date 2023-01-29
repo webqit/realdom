@@ -60,12 +60,12 @@ A succinct attributes observer API that abstracts the [MutationObserver](https:/
 
 ```js
 // Observe all attributes that have been added or removed to/from the specified context ("div" in this case)
-Realtime.observe( div, logMutationRecord );
+Realtime.attr( div, logMutationRecord );
 ```
 
 ```js
 // Observe when the specified attributes are added or removed to/from the specified context ("div" in this case)
-Realtime.observe( div, [ 'contenteditable', 'data-state' ], logMutationRecord );
+Realtime.attr( div, [ 'contenteditable', 'data-state' ], logMutationRecord );
 ```
 
 ```js
