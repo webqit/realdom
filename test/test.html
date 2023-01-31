@@ -2,8 +2,7 @@
 <html>
     <head id="head-id">
 
-
-        <script src="file:///C:/Users/ox_ha/Documents/CODE/dom/dist/main.js"></script>
+        <script src="/dist/main.js"></script>
         <script>
             
             const { dom } = wq;
@@ -12,7 +11,7 @@
                 console.log( 'DOM ready!' ); 
             } );
             // ----------------------
-            dom.attr( document.head, record => {
+            wq.MutationObserver.attr( document.head, record => {
                 //console.log( '=============>>>>>>>>>>>===attr', record );
             } );
             document.head.setAttribute( 'hfhfhfh', 'jjjjjjjj' );
@@ -163,10 +162,9 @@
 
 
 
-            dom.intercept( document, 'script[scoped]', record => {
+            wq.MutationObserver.intercept( document, 'script[scoped]', record => {
                 record.incomingNodes.forEach( script => {
                     intercept( script );
-                    console.log( '=============>>>>>>>>>>>===html', script.wqIntercepted, script.nodeName, script.innerHTML );
                 } );
             }, { subtree: true } );
         </script>
@@ -421,7 +419,6 @@
         </header>
 
         <header id="some-id" class="header-section" style="background-color: rgb(8, 8, 1);">
-            <img style="width: 50px;" src="file:///C:/Users/ox_ha/Desktop/Personal/ddfba091-dcda-4b86-8c2a-e311e1f09c55%20(1).webp">
             <nav class="nav-box">
                 <ul style="list-style: none; display: flex;">
                     <li><a href="/">Home</a></li>
@@ -433,7 +430,7 @@
 
         <main>
             <div class="generic-container" style="display: flex;">
-                <div class="content" id="content-area" style="kdjd">
+                <div class="content" id="content-area">
                     <h1 style="color: red; font-size: 40px;">Hi, I'm Oxford Harrison!</h1>
                     <p>
                         I am a web developer and JavaScript engineer! I have come to my 10th year in the game!
@@ -457,9 +454,6 @@
                     </p>
                 </div>
                 <div id="sidebar">
-                    <img style="width: 200px;" src="file:///C:/Users/ox_ha/Desktop/Personal/ddfba091-dcda-4b86-8c2a-e311e1f09c55%20(1).webp">
-                    <img style="width: 200px;" src="file:///C:/Users/ox_ha/Desktop/Personal/ddfba091-dcda-4b86-8c2a-e311e1f09c55%20(1).webp">
-                    <img style="width: 200px;" src="file:///C:/Users/ox_ha/Desktop/Personal/ddfba091-dcda-4b86-8c2a-e311e1f09c55%20(1).webp">
                 </div>
             </div>
         </main>

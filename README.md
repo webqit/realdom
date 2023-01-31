@@ -6,283 +6,367 @@
 
 <!-- /BADGES -->
 
+## Download
+
+**_Use as an npm package:_**
+
 ```bash
 npm i @webqit/dom
 ```
 
 ```js
+// Import
 import init from '@webqit/dom';
 
+// Initialize the lib
 init.call( window );
+
+// Obtain the APIs
+const { ready, Realtime, Reflow } = window.wq.dom;
+```
+
+**_Use as a script:_**
+
+```html
+<script src="https://unpkg.com/@webqit/dom/dist/main.js"></script>
+```
+
+```js
+// Obtain the APIs
+const { ready, Realtime, Reflow } = window.wq.dom;
 ```
 
 ## Document-Ready Method
 
+Know when the document is ready.
+
 ```js
-window.wq.dom.ready( () => {
-} );
+ready(() => {
+    console.log( 'Document is ready' );
+});
 ```
 
 ## Realtime
 
-```js
-const q = window.wq.dom;
-```
+React to realtime DOM operations.
 
-### `q.querySelectorAll()`
+### Method: `Realtime.attr()`
 
-```js
-// Get all "p" elements, returning an array, but instance of q.constructor
-const pElements = q.querySelectorAll( 'p' );
-console.log( pElements ); // Query(2)
-```
+> `Realtime.attr( context, callback )`
 
-### `q.children()`
+> `Realtime.attr( context, filter, callback )`
+
+A succinct attributes observer API that abstracts the [MutationObserver](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) API!
 
 ```js
-// Get all children, returning an array, but instance of q.constructor
-const children = pElements.children();
-console.log( children ); // Query(2)
-```
-
-### `q.attributes()`
-
-```js
-// Get all attributes, returning an array
-const attrs = pElements.attributes();
-console.log( attrs ); // [ { name, value }, { name, value } ]
+// Observe all attributes that have been added or removed to/from the specified context ("div" in this case)
+Realtime.attr( div, logMutationRecord );
 ```
 
 ```js
-// Get attributes by name, returning an array of values
-const attrs = pElements.attributes( [ name1, name2 ] );
-console.log( attrs ); // [ value1, value2 ]
-```
-
-## Realtime Query Methods
-
-```js
-const r = pElements.realtime(); // Or q.realtime( pElements ); Or q.realtime( 'p' );
-```
-
-### `r.querySelectorAll()`
-
-```js
-// Get all "span" elements each, and in realtime
-let observer = r.querySelectorAll( 'span', spanElement => {
-    // Each existing descendant "span" element is immediately logged
-    // Subsequently added ones are logged too
-    console.log( spanElement ); // HTMLElement
-}, { each: true } );
-```
-
-> **Note**
-> <br>The `each` parameter means that we want our callback to receive elements one-by-one.
-
-```js
-const addSpan = () => pElements[ 0 ].appendChild( document.createElement( 'span' ) );
+// Observe when the specified attributes are added or removed to/from the specified context ("div" in this case)
+Realtime.attr( div, [ 'contenteditable', 'data-state' ], logMutationRecord );
 ```
 
 ```js
-// This new "span" is captured
-setTimeout( addSpan, 1000 );
+function logMutationRecord( record, context ) {
+    // Note the record.name and record.oldValue properties
+    console.log( record.target, record.name, record.oldValue, record.type === 'attribute-record' );
+}
+```
+
+### Method: `Realtime.observe()`
+
+> `Realtime.observe( context, callback[, params = {} ])`
+
+> `Realtime.observe( context, filter, callback[, params = {} ])`
+
+A beautiful abstraction over the awful [MutationObserver](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) API!
+
+```js
+// Observe all elements that have been added or removed to/from the specified context (document in this case)
+Realtime.observe( document, logMutationRecord, { subtree: true } );
 ```
 
 ```js
-// This new "span" is NOT captured
-setTimeout( () => {
-    observer = observer.disconnect();
-    addSpan();
-}, 2000 );
+// Observe all "p" elements that have been added or removed to/from the specified context (document in this case)
+Realtime.observe( document, 'p', logMutationRecord, { subtree: true } );
+
+// "p" elements - whether added from markup and deeply nested (as per { subtree: true })...
+document.body.innerHTML = '<div><p></p></div>';
+
+// or added programmatically...
+const p = document.createElement( 'p' );
+const div = document.createElement( 'div' );
+// and deeply nested (as per { subtree: true })
+div.appendChild( p );
+document.body.appendChild( div );
 ```
 
 ```js
-// This new "span" is captured
-setTimeout( () => {
-    observer = observer.reconnect();
-    addSpan();
-}, 3000 );
-```
+// Observe element instances too (e.g. a "p" instance)...
+const p = document.createElement( 'p' );
+Realtime.observe( document, [ p, orCssSelector ], logMutationRecord, { subtree: true } );
 
-### `r.querySelectorNone()`
-
-```js
-// Run when none of the matched elements are present in the DOM
-// Or when a previously present one leaves the DOM
-let observer = r.querySelectorNone( 'span', spanElement => {
-    // If no "span" elements, we're called immediately, and spanElement is null
-    // If an existing spanElement is removed from DOM, we're called
-    console.log( spanElement?.isConnected ); // false
-}, { each: true } );
+// for when they've been added or removed to/from the given context (document in this case)...
+const div = document.createElement( 'div' );
+// and even when deeply nested (as per { subtree: true })
+div.appendChild( p );
+document.body.appendChild( div );
 ```
 
 ```js
-const removeSpan = () => pElements[ 0 ].querySelector( 'span' ).remove();
+// And now, when having been removed from context...
+// either via an overwrite... (indirect overwrite in this case, as per { subtree: true })...
+document.body.innerHTML = '';
+
+// or via some programmatic means... (indirect removal in this case, as per { subtree: true })...
+document.querySelector( 'div' ).remove();
 ```
 
 ```js
-// This new "span" removal is captured
-setTimeout( removeSpan, 1000 );
+function logMutationRecord( record, context ) {
+    // Note the record.addedNodes and record.removedNodes arrays
+    console.log( record.target, record.addedNodes, record.removedNodes, record.type === 'mutation-record' );
+}
+```
+
+### Method: `Realtime.match()`
+
+> `Realtime.match( context, callback[, params = {} ])`
+
+> `Realtime.match( context, filter, callback[, params = {} ])`
+
+A dual-purpose method that both delivers the current matching result and keeps it live by employing `Realtime.observe()` under the hood.
+
+```js
+// This becomes an exact alias for Realtime.observe() being that no targets are specified
+Realtime.match( document, logMutationRecord, { subtree: true } );
 ```
 
 ```js
-// This new "span" removal is NOT captured
-setTimeout( () => {
-    observer = observer.disconnect();
-    removeSpan();
-}, 2000 );
+// Now, deliver all current "p" elements and keep subsequent mutations to "p" elements coming
+Realtime.match( document, 'p', logMutationRecord, { subtree: true } );
 ```
 
 ```js
-// This new "span" removal is captured
-setTimeout( () => {
-    observer = observer.reconnect();
-    removeSpan();
-}, 3000 );
-```
+// Match element instances too (e.g. a "p" instance)...
+const p = document.createElement( 'p' );
+Realtime.match( document, [ p, orCssSelector ], logMutationRecord, { subtree: true } );
+// But "p" doesn't match as a node connected to the context (document in this case)
+// and so isn't delivered
 
-### `r.children()`
-
-```js
-// Get all children each, and in realtime
-let observer = r.children( childElement => {
-    // Each existing child is immediately logged
-    // Subsequently added ones are logged too
-    console.log( childElement ); // HTMLElement
-}, { each: true } );
+// But it's caught by the observer when added to the context
+const div = document.createElement( 'div' );
+div.appendChild( p );
+document.body.appendChild( div );
 ```
 
 ```js
-const addChild = () => pElements[ 0 ].appendChild( document.createElement( 'b' ) );
+function logMutationRecord( record, context ) {
+    // Depending on record.type
+    // Note the record.connectedNodes and record.disconnectedNodes arrays
+    console.log( record.target, record.connectedNodes, record.disconnectedNodes, record.type === 'query-record' );
+    // Note the record.addedNodes and record.removedNodes arrays
+    console.log( record.target, record.addedNodes, record.removedNodes, record.type === 'mutation-record' );
+}
+```
+
+### Method: `Realtime.intercept()`
+
+> `Realtime.intercept( context, callback[, params = {} ])`
+
+> `Realtime.intercept( context, filter, callback[, params = {} ])`
+
+An ahead-of-time mutation observer API that intercepts DOM operations before they happen. This is much like `Realtime.observe()` but with a marked difference: timing! This captures mutations that *are about to happen*, while the former captures mutations that *have just happened*!
+
+> A good usecase is ahead.
+
+```js
+// Intercept all elements that are BEING added or removed to/from the specified context (document in this case)
+Realtime.intercept( document, logInterceptionRecord, { subtree: true } );
 ```
 
 ```js
-// This new child is captured
-setTimeout( addChild, 1000 );
+// Intercept all "p" elements that are BEING added or removed to/from the specified context (document in this case)
+Realtime.intercept( document, 'p', logInterceptionRecord, { subtree: true } );
+
+// "p" elements - whether added from markup and deeply nested (as per { subtree: true })...
+document.body.innerHTML = '<div><p></p></div>';
+
+// or added programmatically...
+const p = document.createElement( 'p' );
+const div = document.createElement( 'div' );
+// and deeply nested (as per { subtree: true })
+div.appendChild( p );
+document.body.appendChild( div );
 ```
 
 ```js
-// This new child is NOT captured
-setTimeout( () => {
-    observer = observer.disconnect();
-    addChild();
-}, 2000 );
+// Intercept element instances too (e.g. a "p" instance)...
+const p = document.createElement( 'p' );
+Realtime.intercept( document, [ p, orCssSelector ], logInterceptionRecord, { subtree: true } );
+
+// for when they're BEING added or removed to/from the given context (document in this case)...
+const div = document.createElement( 'div' );
+// and even when deeply nested (as per { subtree: true })
+div.appendChild( p );
+document.body.appendChild( div );
 ```
 
 ```js
-// This new child is captured
-setTimeout( () => {
-    observer = observer.reconnect();
-    addChild();
-}, 3000 );
+// And now, when BEING removed from context...
+// either via an overwrite... (indirect overwrite in this case, as per { subtree: true })...
+document.body.innerHTML = '';
+
+// or via some programmatic means... (indirect removal in this case, as per { subtree: true })...
+document.querySelector( 'div' ).remove();
 ```
 
-### `r.attributes()`
+```js
+function logInterceptionRecord( record, context ) {
+    // Note the record.incomingNodes and record.outgoingNodes arrays
+    console.log( record.target, record.incomingNodes, record.outgoingNodes, record.type === 'interception-record' );
+}
+```
+
+---------------------------
+
+**_Some niceties_**
+
++ With each of the three APIs, it is possible to opt in to either just the "connected", "added", "incoming" records or to just the "disconnected", "removed", "outgoing" records. You'd use the `params.on` property:
+    + `params.on: 'connected'` - only records for "connected", "added", "incoming" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
+    + `params.on: 'disconnected'` - only records for "disconnected", "removed", "outgoing" nodes are delivered - with the `match()`, `observe()`, `intercept()` APIs respectively.
+
++ With each of the three APIs, omiting the `{ subtree: true }` setting  would mean that deeply nested targets won't be searched for; only directly-mutated nodes will be evaluated.
+
++ The `Realtime` API is designed for the consistency and predictability that the native `MutationObserver` API lacks for certain usecases.
+
+    For example, bind a mutation observer - with `{subtree: true}` - to the `document` object before page parsing begins, and you'd see that all elements are announced:
+    
+    ```html
+    <html>
+        <head>
+            <script>
+            new MutationObserver( records => {
+                // Log mutations and notice that every element in the tree - e.g. <div> and <p> - is caught
+            } ).observe( document, { subtree: true } );
+            </script>
+        </head>
+        <body>
+            <div>
+                <p></p>
+            </div>
+        </body>
+    </html>
+    ```
+    
+    But try adding an equivalent DOM structure programmatically - e.g. `<div><p></p></div>` - and you'd see that nested elements (`p`) aren't caught:
+    
+    ```js
+    const div = document.createElement( 'div' );
+    const p = document.createElement( 'p' );
+    div.appendChild( p );
+    document.body.appendChild( div );
+    ```
+    
+    By contrast, the `Realtime` API is consistent with `{ subtree: true }` in all cases!
+    
++ The `Realtime.intercept()` API is designed for the rare possiblity of intercepting elements before they're handled natively by the browser. This lets you build tools that extend the DOM in more low-level ways. For example, you could [intercept and rewrite `<script>` elements](https://github.com/webqit/oohtml#scoped-js) before they're parsed and executed.
+
+**_Some notes_**
+
++ The `Realtime` API is able to do the extra-ordinary by going a bit extra-ordinary: by literally intercepting DOM APIs. And here is the complete list of them:
+    
+    + `Node`: `insertBefore`, `replaceChild`, `removeChild`, `appendChild`, `textContent`, `nodeValue`.
+    + `Element`: `insertAdjacentElement`, `insertAdjacentHTML`, `setHTML`, `replaceChildren`, `replaceWith`, `remove`. `before`, `after`, `append`, `prepend`.
+    + `HTMLElement`: `outerText`, `innerText`.
+    
+    Point is: monkeying (responsibly) with the DOM for polyfill development is a norm. But you may need to consider this caveat carefully in your specific usecases.
+
+## Reflow
+
+Eliminate layout thrashing by batching DOM read/write operations. (Compare [fastdom](https://github.com/wilsonpage/fastdom))
 
 ```js
-// Get all attributes each, and in realtime
-let observer = r.attributes( ( { name, value } ) => {
-    // Each existing attribute is immediately logged
-    // Subsequently added/remved ones are logged too
-    // Removed ones have their values undefined
-    console.log( name, value );
+Reflow.onread( () => {
+  console.log( 'reading phase of the UI' );
+} );
+
+Reflow.onwrite( () => {
+  console.log( 'writing phase of the UI' );
+} );
+
+Reflow.onread( () => {
+  console.log( 'reading phase of the UI'  );
+} );
+
+Reflow.onwrite( () => {
+  console.log( 'writing phase of the UI'  );
 } );
 ```
 
-```js
-// Get attributes by name, and in realtime
-let observer = r.attributes( [ name1, name2 ], ( value1, value2 ) => {
-    // Each existing attribute is immediately logged
-    // Subsequently added/remved ones are logged too
-    // Removed ones have their values undefined
-    console.log( value1, value2 );
-} );
+```
+reading phase of the UI
+reading phase of the UI
+writing phase of the UI
+writing phase of the UI
 ```
 
-```js
-const addAttr = () => pElements[ 0 ].setAttribute( 'name', 'value' );
-```
+**_Concept_**
+
+The `Reflow` API works as a regulatory layer between your app/library and the DOM. It lets you think of the DOM in terms of a "reading" phase and a "writing" phase, and lets you hook into this cycle when working with the DOM: `onread()` for doing "read" operations, and `onwrite` for doing "write" operations. Batching DOM operations this way lets us avoid unnecessary document reflows and dramatically speed up layout performance.
+
+> Each read/write operation is added to a corresponding read/write queue. The queues are emptied (reads, then writes) at the turn of the next frame using `window.requestAnimationFrame`.
+
+### Method: `Reflow.onread()`
+
+> `Reflow.onread( onread[, inPromiseMode = false ])`
+
+Schedules a job for the "read" phase. Can return a promise that resolves when job eventually executes; you ask for a promise by supplying `true` as a second argument.
 
 ```js
-// This new attribute is captured
-setTimeout( addAttr, 1000 );
+const promise = Reflow .onread( () => {
+  const width = element.clientWidth;
+}, true/*give back a promise*/ );
 ```
+
+### Method: `Reflow.onwrite()`
+
+> `Reflow.onwrite( onwrite[, inPromiseMode = false ])`
+
+Schedules a job for the "write" phase. Can return a promise that resolves when job eventually executes; you ask for a promise by supplying `true` as a second argument.
 
 ```js
-// This new attribute is NOT captured
-setTimeout( () => {
-    observer = observer.disconnect();
-    addAttr();
-}, 2000 );
+const promise = Reflow .onwrite( () => {
+  element.style.width = width + 'px';
+}, true/*give back a promise*/ );
 ```
+
+### Method: `Reflow.cycle()`
+
+> `Reflow.cycle( onread, onwrite )`
+
+Puts your read/write operations in a cycle that keeps in sync with the UI's read/write phases.
 
 ```js
-// This new attribute is captured
-setTimeout( () => {
-    observer = observer.reconnect();
-    addAttr();
-}, 3000 );
+Reflow.cycle(
+    // onread
+    () => {
+        // Do a read operation
+        const width = element.clientWidth;
+        // Now if we return anything other than undefined, the "onwrite" block is executed
+        return width; // recieved by the "onwrite" callback on its first parameter
+    },
+    // onwrite
+    ( width, carried ) => {
+        // Do a write operation
+        element.style.width = width + 'px';
+        // Now if we return anything other than undefined, the cycle repeats starting with the "onread" block
+        return newCarry; // recieved by the "onwrite" block again on its second parameter: "carried"
+    }
+);
 ```
-
-## Other Methods
-
-### `r.connectedCallback()`
-
-```js
-// Equivalent to r.querySelectorAll() but only for an element instance, instead of a selector
-```
-
-```js
-// Takes an element instance
-q.realtime( document.querySelector( 'p' ) ).connectedCallback( pElement  => {
-    // We're called immediately if element is connected
-    // And later on subsequent connectedness
-}, { each: true } );
-```
-
-```js
-// Also takes multiple element instances
-q.realtime( document.querySelectorAll( 'p' ) ).connectedCallback( ( pElement, connectedFlag, connectedFlagNow, totalCoonected, totalDiscoonected )  => {
-    console.log( totalCoonected, totalDiscoonected );
-}, { each: true, maintainCallState: true /* to receive totalCoonected and totalDiscoonected */ } );
-```
-
-### `r.disconnectedCallback()`
-
-```js
-// Equivalent to r.querySelectorNone() but only for an element instance, instead of a selector
-```
-
-```js
-// Takes an element instance
-q.realtime( document.querySelector( 'p' ) ).disconnectedCallback( pElement  => {
-    // We're called immediately if element is disconnected
-    // And later on subsequent disconnectedness
-}, { each: true } );
-```
-
-```js
-// Also takes multiple element instances
-q.realtime( document.querySelectorAll( 'p' ) ).disconnectedCallback( ( pElement, connectedFlag, connectedFlagNow, totalCoonected, totalDiscoonected )  => {
-    console.log( totalCoonected, totalDiscoonected );
-}, { each: true, maintainCallState: true /* to receive totalCoonected and totalDiscoonected */ } );
-```
-
-### `r.presenceChangeCallback()`
-
-```js
-// Equivalent to r.connectedCallback() + r.disconnectedCallback(), but only on new mutations
-```
-
-### `r.attributeChangeCallback()`
-
-```js
-// Equivalent to r.attributes(), but only on new mutations
-```
-
-## Documentation
-
-Coming Soon.
 
 ## Issues
 
