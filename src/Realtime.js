@@ -15,233 +15,236 @@ import { _from as _arrFrom } from '@webqit/util/arr/index.js';
  *
  * @var Map
  */
-const wq = {};
-wq.apiMutationsBindings = [ new Map, new Map, ];
-wq.apiMutationsBindings.hasListeners = () => wq.apiMutationsBindings.some( x => x.size );
-export default window => class Realtime {
+export default window => {
+	const wq = window.wq;
+	wq.apiMutationsBindings = [ new Map, new Map, ];
+	wq.apiMutationsBindings.hasListeners = () => wq.apiMutationsBindings.some( x => x.size );
+	wq.apiMutationsHooks = new Set;
+	return class Realtime {
 
-	/**
-	 * Observes changes in attributes of the given element.
-	 *
-	 * @param Element					context
-	 * @param array						filter
-	 * @param function					callback
-	 *
-	 * @return Realtime
-	 */
-	attr( context, filter, callback ) {
-		[ context, filter, callback ] = resolveArgs( arguments );
-		const mo = new window.MutationObserver( records => {
-			records.forEach( record => callback( {
-				target: record.target,
-				name: record.attributeName,
-				oldValue: record.oldValue,
-				type: 'attribute-record',
-			}, context ) );
-		} );
-		const params = { attributes: true, attributeOldValue: true };
-		if ( filter.length ) { params.attributeFilter = filter; }
-		mo.observe( context, params );
-		return mo;
-	}
-	
-	/**
-	 * Mutation matching
-	 *
-	 * @param document|Element			callback
-	 * @param array|Element|string		selectors
-	 * @param function					callback
-	 * @param object					params
-	 *
-	 * @return void
-	 */
-	match( context, selectors, callback, params = {} ) {
-		[ context, selectors, callback, params = {} ] = resolveArgs( arguments );
-		// ------------------
-		const records = new Set, getRecord = target => {
-			if ( !records.has( target ) ) {
-				records.set( target, {
-					target, 
-					connectedNodes: [], 
-					disconnectedNodes: [],
-					type: 'query-record',
-				} );
-			}
-			return records.get( target );
-		};
-		// ------------------
-		if ( selectors.every( selector => _isString( selector ) ) && ( selectors = selectors.join( ',' ) ) ) {
-			if ( !params.on || params.on === 'connected' ) {
-				( params.subtree ? context.querySelectorAll( selectors ) : context.children || [] ).forEach( node => {
-					getRecord( node.parentNode ).connectedNodes.push( node );
-				} );
-			}
-		} else if ( selectors.every( selector => _isObject( selector ) ) ) {
-			if ( context !== document || params.subtree ) {
-				selectors.forEach( node => {
-					const isConnected = context === document ? node.isConnected : (
-						node.parentNode === context || ( params.subtree && context.contains( node ) )
-					);
-					if ( ( ( !params.on || params.on === 'connected' ) && isConnected ) || ( params.on === 'disconnected' && !isConnected ) ) {
-						getRecord( node.parentNode )[ isConnected ? 'connectedNodes' : 'disconnectedNodes' ].push( node );
-					}
-				} );
-			}
+		/**
+		 * Observes changes in attributes of the given element.
+		 *
+		 * @param Element					context
+		 * @param array						filter
+		 * @param function					callback
+		 *
+		 * @return Realtime
+		 */
+		attr( context, filter, callback ) {
+			[ context, filter, callback ] = resolveArgs( arguments );
+			const mo = new window.MutationObserver( records => {
+				records.forEach( record => callback( {
+					target: record.target,
+					name: record.attributeName,
+					oldValue: record.oldValue,
+					type: 'attribute-record',
+				}, context ) );
+			} );
+			const params = { attributes: true, attributeOldValue: true };
+			if ( filter.length ) { params.attributeFilter = filter; }
+			mo.observe( context, params );
+			return mo;
 		}
-		// ------------------
-		records.forEach( record => callback( record, context ) );
-		// ------------------
-		return this.observe( ...arguments );
-	}
+		
+		/**
+		 * Mutation matching
+		 *
+		 * @param document|Element			callback
+		 * @param array|Element|string		selectors
+		 * @param function					callback
+		 * @param object					params
+		 *
+		 * @return void
+		 */
+		match( context, selectors, callback, params = {} ) {
+			[ context, selectors, callback, params = {} ] = resolveArgs( arguments );
+			// ------------------
+			const records = new Set, getRecord = target => {
+				if ( !records.has( target ) ) {
+					records.set( target, {
+						target, 
+						connectedNodes: [], 
+						disconnectedNodes: [],
+						type: 'query-record',
+					} );
+				}
+				return records.get( target );
+			};
+			// ------------------
+			if ( selectors.every( selector => _isString( selector ) ) && ( selectors = selectors.join( ',' ) ) ) {
+				if ( !params.on || params.on === 'connected' ) {
+					( params.subtree ? context.querySelectorAll( selectors ) : context.children || [] ).forEach( node => {
+						getRecord( node.parentNode ).connectedNodes.push( node );
+					} );
+				}
+			} else if ( selectors.every( selector => _isObject( selector ) ) ) {
+				if ( context !== document || params.subtree ) {
+					selectors.forEach( node => {
+						const isConnected = context === document ? node.isConnected : (
+							node.parentNode === context || ( params.subtree && context.contains( node ) )
+						);
+						if ( ( ( !params.on || params.on === 'connected' ) && isConnected ) || ( params.on === 'disconnected' && !isConnected ) ) {
+							getRecord( node.parentNode )[ isConnected ? 'connectedNodes' : 'disconnectedNodes' ].push( node );
+						}
+					} );
+				}
+			}
+			// ------------------
+			records.forEach( record => callback( record, context ) );
+			// ------------------
+			return this.observe( ...arguments );
+		}
 
-	/**
-	 * Mutation Observer
-	 * 
-	 * @param document|Element			callback
-	 * @param array|Element|string		selectors
-	 * @param function					callback
-	 * @param object					params
-	 * 
-	 * @returns Object
-	 */
-	observe( context,  selectors, callback, params = {} ) {
-		// ------------------------
-		// If the document is still parsing, we need to detect
-		// API-based DOM mutations so as for them to be treated differently
-		const { document } = window;
-		if ( document.readyState === 'loading' && !wq.parsetimeApiMutations ) {
-			wq.parsetimeApiMutations = new Set;
-			bindToApiMutations( window, record => {
-				if ( !wq.parsetimeApiMutations ) return;
-				record.incomingNodes.concat( record.outgoingNodes ).forEach( node => {
-					wq.parsetimeApiMutations.add( node );
-				} );
-			} );
-			document.addEventListener( 'readystatechange', () => {
-				wq.parsetimeApiMutations?.clear();
-				wq.parsetimeApiMutations = null;
-			} );
-		}
-		// ------------------------
-		[ context, selectors, callback, params = {} ] = resolveArgs( arguments );
-		const mo = new window.MutationObserver( records => {
-			records.forEach( ( { target, addedNodes, removedNodes } ) => {
-				emit.call( this, context, {
-					target,
-					addedNodes,
-					removedNodes,
-					type: 'mutation-record',
-				}/*!important*/, {
-					selectors,
-					callback,
-					params: {
-						// deepIntersect after document is done parsing OR for mutations done while still parsing
-						deepIntersect: node => document.readyState !== 'loading' || wq.parsetimeApiMutations?.has( node ),
-						// deepIntersect may be overridden below
-						...params,
-					},
-				} );
-			} );
-		} );
-		const connect = () => mo.observe( context, { childList: true, subtree: params.subtree, } );
-		connect();
-		const controller = {
-			disconnect() {
-				mo.disconnect();
-				return {
-					reconnect() {
-						connect();
-						return controller;
-					},
-				};
-			},
-		};
-		// ------------------------
-		return controller;
-	}
-	
-	/**
-	 * Mutation Interceptor
-	 * 
-	 * @param document|Element			callback
-	 * @param array|Element|string		selectors
-	 * @param function					callback
-	 * @param object					params
-	 * 
-	 * @returns Object
-	 */
-	intercept( context, selectors, callback, params = {} ) {
-		[ context, selectors, callback, params = {} ] = resolveArgs( arguments );
-		// -------------
-		if ( !wq.apiMutationsBindings.intercepting ) {
+		/**
+		 * Mutation Observer
+		 * 
+		 * @param document|Element			callback
+		 * @param array|Element|string		selectors
+		 * @param function					callback
+		 * @param object					params
+		 * 
+		 * @returns Object
+		 */
+		observe( context,  selectors, callback, params = {} ) {
+			// ------------------------
+			// If the document is still parsing, we need to detect
+			// API-based DOM mutations so as for them to be treated differently
 			const { document } = window;
-			wq.apiMutationsBindings.intercepting = true;
-			// -----------
-			// Interception handler
-			// -----------
-			const intercept = record => {
-				wq.apiMutationsBindings.forEach( ( contexts, index ) => {
-					contexts.forEach( ( traps, context ) => {
-						if ( !( record.target === context || ( index && ( context === document && record.target.isConnected || context.contains( record.target ) ) ) ) ) return;
-						traps.forEach( trap => {
-							if ( record.type === 'mutation-record' ) {
-								// Parse-based events are finegrained and should not be deep-intersected
-								trap = { ...trap, params: { ...trap.params, deepIntersect: false/* non-overridable */ } };
-							} else {
-								// API-based events aren't finegrained and should be deep-intersected
-								trap = { ...trap, params: { deepIntersect: true/* overridable */, ...trap.params } };
-							}
-							emit.call( this, context, record, trap );
-						} );
+			if ( document.readyState === 'loading' && !wq.parsetimeApiMutations ) {
+				wq.parsetimeApiMutations = new Set;
+				bindToApiMutations( window, record => {
+					if ( !wq.parsetimeApiMutations ) return;
+					record.incomingNodes.concat( record.outgoingNodes ).forEach( node => {
+						wq.parsetimeApiMutations.add( node );
 					} );
 				} );
-			};
-			bindToApiMutations( window, intercept );
-			// -----------
-			// If the document is still loading, catch parser-based events
-			// -----------
-			if ( document.readyState === 'loading' ) {
-				const controller = this.observe( document, record => {
-					record = {
-						target: record.target,
-						incomingNodes: record.addedNodes.filter( node => !wq.parsetimeApiMutations?.has( node ) ),
-						outgoingNodes: record.removedNodes.filter( node => !wq.parsetimeApiMutations?.has( node ) ),
-						type: record.type,
-					};
-					if ( !record.incomingNodes.length && !record.outgoingNodes.length ) return;
-					intercept( record );
-				}, { subtree: true } );
-				document.addEventListener( 'readystatechange', () => controller.disconnect() );
+				document.addEventListener( 'readystatechange', () => {
+					wq.parsetimeApiMutations?.clear();
+					wq.parsetimeApiMutations = null;
+				} );
 			}
-			// -----------
+			// ------------------------
+			[ context, selectors, callback, params = {} ] = resolveArgs( arguments );
+			const mo = new window.MutationObserver( records => {
+				records.forEach( ( { target, addedNodes, removedNodes } ) => {
+					emit.call( this, context, {
+						target,
+						addedNodes,
+						removedNodes,
+						type: 'mutation-record',
+					}/*!important*/, {
+						selectors,
+						callback,
+						params: {
+							// deepIntersect after document is done parsing OR for mutations done while still parsing
+							deepIntersect: node => document.readyState !== 'loading' || wq.parsetimeApiMutations?.has( node ),
+							// deepIntersect may be overridden below
+							...params,
+						},
+					} );
+				} );
+			} );
+			const connect = () => mo.observe( context, { childList: true, subtree: params.subtree, } );
+			connect();
+			const controller = {
+				disconnect() {
+					mo.disconnect();
+					return {
+						reconnect() {
+							connect();
+							return controller;
+						},
+					};
+				},
+			};
+			// ------------------------
+			return controller;
 		}
-		// -------------
-		const contexts = wq.apiMutationsBindings[ params.subtree ? 1 : 0 ];
-		if ( !contexts.has( context ) ) { contexts.set( context, new Set ); }
-		// -------------
-		const traps = contexts.get( context );
-		const trap = { selectors, callback, params };
-		traps.add( trap );
-		// -------------
-		const controller = {
-			disconnect() {
-				traps.delete( trap );
-				if ( !traps.size ) { contexts.delete( context ); }
-				return {
-					reconnect() {
-						if ( !traps.size ) {
-							return this.intercept( context, selectors, callback, params );
-						}
-						traps.add( trap );
-						return controller;
-					},
+		
+		/**
+		 * Mutation Interceptor
+		 * 
+		 * @param document|Element			callback
+		 * @param array|Element|string		selectors
+		 * @param function					callback
+		 * @param object					params
+		 * 
+		 * @returns Object
+		 */
+		intercept( context, selectors, callback, params = {} ) {
+			[ context, selectors, callback, params = {} ] = resolveArgs( arguments );
+			// -------------
+			if ( !wq.apiMutationsBindings.intercepting ) {
+				const { document } = window;
+				wq.apiMutationsBindings.intercepting = true;
+				// -----------
+				// Interception handler
+				// -----------
+				const intercept = record => {
+					wq.apiMutationsBindings.forEach( ( contexts, index ) => {
+						contexts.forEach( ( traps, context ) => {
+							if ( !( record.target === context || ( index && ( context === document && record.target.isConnected || context.contains( record.target ) ) ) ) ) return;
+							traps.forEach( trap => {
+								if ( record.type === 'mutation-record' ) {
+									// Parse-based events are finegrained and should not be deep-intersected
+									trap = { ...trap, params: { ...trap.params, deepIntersect: false/* non-overridable */ } };
+								} else {
+									// API-based events aren't finegrained and should be deep-intersected
+									trap = { ...trap, params: { deepIntersect: true/* overridable */, ...trap.params } };
+								}
+								emit.call( this, context, record, trap );
+							} );
+						} );
+					} );
 				};
-			},
-		};
-		// -------------
-		return controller;
-	}
+				bindToApiMutations( window, intercept );
+				// -----------
+				// If the document is still loading, catch parser-based events
+				// -----------
+				if ( document.readyState === 'loading' ) {
+					const controller = this.observe( document, record => {
+						record = {
+							target: record.target,
+							incomingNodes: record.addedNodes.filter( node => !wq.parsetimeApiMutations?.has( node ) ),
+							outgoingNodes: record.removedNodes.filter( node => !wq.parsetimeApiMutations?.has( node ) ),
+							type: record.type,
+						};
+						if ( !record.incomingNodes.length && !record.outgoingNodes.length ) return;
+						intercept( record );
+					}, { subtree: true } );
+					document.addEventListener( 'readystatechange', () => controller.disconnect() );
+				}
+				// -----------
+			}
+			// -------------
+			const contexts = wq.apiMutationsBindings[ params.subtree ? 1 : 0 ];
+			if ( !contexts.has( context ) ) { contexts.set( context, new Set ); }
+			// -------------
+			const traps = contexts.get( context );
+			const trap = { selectors, callback, params };
+			traps.add( trap );
+			// -------------
+			const controller = {
+				disconnect() {
+					traps.delete( trap );
+					if ( !traps.size ) { contexts.delete( context ); }
+					return {
+						reconnect() {
+							if ( !traps.size ) {
+								return this.intercept( context, selectors, callback, params );
+							}
+							traps.add( trap );
+							return controller;
+						},
+					};
+				},
+			};
+			// -------------
+			return controller;
+		}
 
+	};
 };
 
 
@@ -271,26 +274,26 @@ function resolveArgs( args ) {
  * @returns Array
  */
 function emit( context, record, trap ) {
-	let matches;
+	let matches, _record = { ...record };
 	[ 'addedNodes', 'incomingNodes', 'removedNodes', 'outgoingNodes' ].forEach( prop => {
-		if ( !( prop in record ) ) return;
+		if ( !( prop in _record ) ) return;
 		const isExit = [ 'removedNodes', 'outgoingNodes' ].includes( prop );
 		if ( ( isExit && trap.params.on === 'connected' ) || ( !isExit && trap.params.on === 'disconnected' ) ) {
-			record[ prop ] = [];
+			_record[ prop ] = [];
 		} else if ( !trap.selectors.length ) {
-			record[ prop ] = [ ...record[ prop ] ];
+			_record[ prop ] = [ ..._record[ prop ] ];
 			matches = true;
-		} else if ( ( record[ prop ] = intersectNodes.call(
+		} else if ( ( _record[ prop ] = intersectNodes.call(
 			this,
 			trap.selectors,
-			record[ prop ],
+			_record[ prop ],
 			trap.params.deepIntersect,
 		) ).length ) {
 			matches = true;
 		}
 	} );
 	if ( matches ) {
-		trap.callback( record, context );
+		trap.callback( _record, context );
 	}
 }
 
@@ -357,8 +360,8 @@ function intersectNodes( targets, sources, deepIntersect ) {
  * 
  * @returns 
  */
-wq.apiMutationsHooks = new Set;
 function bindToApiMutations( window, callback ) {
+	const wq = window.wq;
 	wq.apiMutationsHooks.add( callback );
 	if ( wq.apiMutationsHooks.intercepting ) return;
 	wq.apiMutationsHooks.intercepting = true;
