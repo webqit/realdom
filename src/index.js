@@ -4,8 +4,9 @@
  */
 import { _isNumeric } from '@webqit/util/js/index.js';
 import { _set, _get, _merge } from '@webqit/util/obj/index.js';
-import createRealtimeClass from './Realtime.js';
-import createReflowClass from './Reflow.js';
+import _Reflow from './_Reflow.js';
+import DOMRealtime from './realtime/DOMRealtime.js';
+import AttrRealtime from './realtime/AttrRealtime.js';
 import polyfill from './polyfills.js';
 
 export default function() {
@@ -15,11 +16,15 @@ export default function() {
     window.wq.dom = {};
     polyfill.call( window );
     // ------
-    const Reflow = createReflowClass( window );
+    const Reflow = _Reflow( window );
     window.wq.dom.Reflow = new Reflow;
     // ------
-    const Realtime = createRealtimeClass( window );
-    window.wq.dom.Realtime = new Realtime;
+    window.wq.dom.DOMRealtime = DOMRealtime;
+    window.wq.dom.AttrRealtime = AttrRealtime;
+    window.wq.dom.realtime = ( context, namespace = 'tree' ) => {
+        if ( namespace === 'tree' ) return new DOMRealtime( context, window );
+        if ( namespace === 'attr' ) return new AttrRealtime( context, window );
+    };
     // ------
     window.wq.dom.ready = ready.bind( window );
     window.wq.dom.meta = meta.bind( window );
