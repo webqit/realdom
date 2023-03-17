@@ -108,8 +108,8 @@ export default class DOMRealtime extends Realtime {
 		// ------------------------
 		const { context, window, wq, document } = this;
 		// ------------------
-		if ( params.eventDetails ) { wq.domInterceptionRecordsAlwaysOn = true; }
-		if ( ( document.readyState === 'loading' || wq.domInterceptionRecordsAlwaysOn ) && !wq.domInterceptionHooks?.intercepting ) {
+		if ( params.eventDetails ) { wq.dom.domInterceptionRecordsAlwaysOn = true; }
+		if ( ( document.readyState === 'loading' || wq.dom.domInterceptionRecordsAlwaysOn ) && !wq.dom.domInterceptionHooks?.intercepting ) {
 			domInterception.call( window, 'sync', () => {} );
 		}
 		// -------------
@@ -304,8 +304,8 @@ function nodesIntersection( targets, sources, deepIntersect ) {
  */
 function withEventDetails( { target, addedNodes, removedNodes } ) {
 	let window = this, event;
-	event = _arrFrom( addedNodes ).reduce( ( prev, node ) => prev || window.wq.domInterceptionRecords?.get( node ), null );
-	event = _arrFrom( removedNodes ).reduce( ( prev, node ) => prev || window.wq.domInterceptionRecords?.get( node ), event );
+	event = _arrFrom( addedNodes ).reduce( ( prev, node ) => prev || window.wq.dom.domInterceptionRecords?.get( node ), null );
+	event = _arrFrom( removedNodes ).reduce( ( prev, node ) => prev || window.wq.dom.domInterceptionRecords?.get( node ), event );
 	event = event || window.document.readyState === 'loading' && 'parse' || 'mutation';
 	return { target, entrants: addedNodes, exits: removedNodes, type: 'observation', event };
 }
@@ -321,29 +321,29 @@ function withEventDetails( { target, addedNodes, removedNodes } ) {
 function domInterception( timing, callback ) {
 	const window = this;
 	const { wq, document, Node, Element, HTMLElement, HTMLTemplateElement, DocumentFragment } = window;
-	if ( !wq.domInterceptionHooks ) { wq.domInterceptionHooks = new Map; }
-	if ( !wq.domInterceptionHooks.has( timing ) ) { wq.domInterceptionHooks.set( timing, new Set ); }
-	wq.domInterceptionHooks.get( timing ).add( callback );
-	const rm = () => wq.domInterceptionHooks.get( timing ).delete( callback );
-	if ( wq.domInterceptionHooks?.intercepting ) return rm;
+	if ( !wq.dom.domInterceptionHooks ) { wq.dom.domInterceptionHooks = new Map; }
+	if ( !wq.dom.domInterceptionHooks.has( timing ) ) { wq.dom.domInterceptionHooks.set( timing, new Set ); }
+	wq.dom.domInterceptionHooks.get( timing ).add( callback );
+	const rm = () => wq.dom.domInterceptionHooks.get( timing ).delete( callback );
+	if ( wq.dom.domInterceptionHooks?.intercepting ) return rm;
 	console.warn( `DOM mutation APIs are now being intercepted.` );
-	wq.domInterceptionHooks.intercepting = true;
-	wq.domInterceptionRecords = new Map;
+	wq.dom.domInterceptionHooks.intercepting = true;
+	wq.dom.domInterceptionRecords = new Map;
 
 	// Interception hooks
-	const shouldObserve = () => true//document.readyState === 'loading' || wq.domInterceptionRecordsAlwaysOn;
+	const shouldObserve = () => true//document.readyState === 'loading' || wq.dom.domInterceptionRecordsAlwaysOn;
 	const intercept = ( record, defaultAction ) => {
 		if ( shouldObserve() ) {
 			record.entrants.concat( record.exits ).forEach( node => {
-				clearTimeout( wq.domInterceptionRecords.get( node )?.timeout ); // Clear any previous that's still active
-				wq.domInterceptionRecords.set( node, record.event ); // Main: set event details... and next to timeout details
-				const timeout = setTimeout( () => { wq.domInterceptionRecords.delete( node ); }, 0 );
+				clearTimeout( wq.dom.domInterceptionRecords.get( node )?.timeout ); // Clear any previous that's still active
+				wq.dom.domInterceptionRecords.set( node, record.event ); // Main: set event details... and next to timeout details
+				const timeout = setTimeout( () => { wq.dom.domInterceptionRecords.delete( node ); }, 0 );
 				Object.defineProperty( record.event, 'timeout', { value: timeout, configurable: true } );
 			} );
-		} else { wq.domInterceptionRecords.clear(); }
-		wq.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
+		} else { wq.dom.domInterceptionRecords.clear(); }
+		wq.dom.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
 		const returnValue = defaultAction();
-		wq.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
+		wq.dom.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
 		return returnValue;
 	};
 
@@ -351,8 +351,8 @@ function domInterception( timing, callback ) {
 	if ( shouldObserve() ) {
 		const mo = new window.MutationObserver( records => records.forEach( record => {
 			if ( Array.isArray( ( record = withEventDetails.call( window, record ) ).event ) ) return;
-			wq.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
-			wq.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
+			wq.dom.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
+			wq.dom.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
 		} ) );
 		mo.observe( document, { childList: true, subtree: true, } );
 		document.addEventListener( 'readystatechange', () => !shouldObserve() && mo.disconnect() );

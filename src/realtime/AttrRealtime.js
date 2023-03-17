@@ -63,7 +63,7 @@ export default class AttrRealtime extends Realtime {
 		// ------------------------
 		const { context, window, wq } = this;
 		// ------------------
-		if ( params.eventDetails && !wq.attrInterceptionHooks?.intercepting ) {
+		if ( params.eventDetails && !wq.dom.attrInterceptionHooks?.intercepting ) {
 			attrInterception.call( window, 'intercept', () => {} );
 		}
 		// -------------
@@ -203,7 +203,7 @@ function attrIntersection( context, filter, records = [] ) {
  * @returns Object
  */
 function withAttrEventDetails( { target, attributeName, value, oldValue } ) {
-	const window = this, registry = window.wq.attrInterceptionRecords?.get( target ) || {};
+	const window = this, registry = window.wq.dom.attrInterceptionRecords?.get( target ) || {};
 	const event = registry[ attributeName ] || 'mutation';
 	const record = { target, name: attributeName, value, oldValue, type: 'observation', event };
 	return record;
@@ -220,28 +220,28 @@ function withAttrEventDetails( { target, attributeName, value, oldValue } ) {
 function attrInterception( timing, callback ) {
 	const window = this;
 	const { wq, document, Element } = window;
-	if ( !wq.attrInterceptionHooks ) { wq.attrInterceptionHooks = new Map; }
-	if ( !wq.attrInterceptionHooks.has( timing ) ) { wq.attrInterceptionHooks.set( timing, new Set ); }
-	wq.attrInterceptionHooks.get( timing ).add( callback );
-	const rm = () => wq.attrInterceptionHooks.get( timing ).delete( callback );
-	if ( wq.attrInterceptionHooks?.intercepting ) return rm;
+	if ( !wq.dom.attrInterceptionHooks ) { wq.dom.attrInterceptionHooks = new Map; }
+	if ( !wq.dom.attrInterceptionHooks.has( timing ) ) { wq.dom.attrInterceptionHooks.set( timing, new Set ); }
+	wq.dom.attrInterceptionHooks.get( timing ).add( callback );
+	const rm = () => wq.dom.attrInterceptionHooks.get( timing ).delete( callback );
+	if ( wq.dom.attrInterceptionHooks?.intercepting ) return rm;
 	console.warn( `Attr mutation APIs are now being intercepted.` );
-	wq.attrInterceptionHooks.intercepting = true;
-	wq.attrInterceptionRecords = new Map;
+	wq.dom.attrInterceptionHooks.intercepting = true;
+	wq.dom.attrInterceptionRecords = new Map;
 
 	// Interception hooks
 	const attrIntercept = ( record, defaultAction ) => {
-		if ( !wq.attrInterceptionRecords.has( record.target ) ) { wq.attrInterceptionRecords.set( record.target, {} ); }
-		const registry = wq.attrInterceptionRecords.get( record.target );
+		if ( !wq.dom.attrInterceptionRecords.has( record.target ) ) { wq.dom.attrInterceptionRecords.set( record.target, {} ); }
+		const registry = wq.dom.attrInterceptionRecords.get( record.target );
 		// ------------------
 		clearTimeout( registry[ record.name ]?.timeout ); // Clear any previous that's still active
 		registry[ record.name ] = record.event; // Main: set event details... and next to timeout details
 		const timeout = setTimeout( () => { delete registry[ record.name ]; }, 0 );
 		Object.defineProperty( record.event, 'timeout', { value: timeout, configurable: true } );
 		// ------------------
-		wq.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( [ record ] ) );
+		wq.dom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( [ record ] ) );
 		const returnValue = defaultAction();
-		wq.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( [ record ] ) );
+		wq.dom.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( [ record ] ) );
 		return returnValue;
 	};
 
@@ -251,8 +251,8 @@ function attrInterception( timing, callback ) {
 			return !Array.isArray( rcd.event );
 		} );
 		if ( !records.length ) return;
-		wq.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( records ) );
-		wq.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( records ) );
+		wq.dom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( records ) );
+		wq.dom.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( records ) );
 	} );
 	mo.observe( document, { attributes: true, subtree: true, attributeOldValue: true } );
 
