@@ -64,7 +64,7 @@ function ready( callback ) {
  */
 function meta( name ) {
     const window = this;
-    let _content, _el;
+    let _content = {}, _el;
     if ( _el = window.document.querySelector( `meta[name="${ name }"]` ) ) {
         _content = ( _el.content || '' ).split( ';' ).filter( v => v ).reduce( ( _metaVars, directive ) => {
             const directiveSplit = directive.split( '=' ).map( d => d.trim() );
