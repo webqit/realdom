@@ -321,14 +321,14 @@ function withEventDetails( { target, addedNodes, removedNodes } ) {
 function domInterception( timing, callback ) {
 	const window = this;
 	const { webqit, document, Node, Element, HTMLElement, HTMLTemplateElement, DocumentFragment } = window;
-	if ( !webqit.dom.domInterceptionHooks ) { webqit.dom.domInterceptionHooks = new Map; }
+	if ( !webqit.dom.domInterceptionHooks ) { Object.defineProperty( webqit.dom, 'domInterceptionHooks', { value: new Map } ); }
 	if ( !webqit.dom.domInterceptionHooks.has( timing ) ) { webqit.dom.domInterceptionHooks.set( timing, new Set ); }
 	webqit.dom.domInterceptionHooks.get( timing ).add( callback );
 	const rm = () => webqit.dom.domInterceptionHooks.get( timing ).delete( callback );
 	if ( webqit.dom.domInterceptionHooks?.intercepting ) return rm;
 	console.warn( `DOM mutation APIs are now being intercepted.` );
 	webqit.dom.domInterceptionHooks.intercepting = true;
-	webqit.dom.domInterceptionRecords = new Map;
+	Object.defineProperty( webqit.dom, 'domInterceptionRecords', { value: new Map } );
 
 	// Interception hooks
 	const shouldObserve = () => true//document.readyState === 'loading' || webqit.dom.domInterceptionRecordsAlwaysOn;

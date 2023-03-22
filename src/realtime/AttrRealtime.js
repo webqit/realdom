@@ -220,14 +220,14 @@ function withAttrEventDetails( { target, attributeName, value, oldValue } ) {
 function attrInterception( timing, callback ) {
 	const window = this;
 	const { webqit, document, Element } = window;
-	if ( !webqit.dom.attrInterceptionHooks ) { webqit.dom.attrInterceptionHooks = new Map; }
+	if ( !webqit.dom.attrInterceptionHooks ) { Object.defineProperty( webqit.dom, 'attrInterceptionHooks', { value: new Map } ); }
 	if ( !webqit.dom.attrInterceptionHooks.has( timing ) ) { webqit.dom.attrInterceptionHooks.set( timing, new Set ); }
 	webqit.dom.attrInterceptionHooks.get( timing ).add( callback );
 	const rm = () => webqit.dom.attrInterceptionHooks.get( timing ).delete( callback );
 	if ( webqit.dom.attrInterceptionHooks?.intercepting ) return rm;
 	console.warn( `Attr mutation APIs are now being intercepted.` );
 	webqit.dom.attrInterceptionHooks.intercepting = true;
-	webqit.dom.attrInterceptionRecords = new Map;
+	Object.defineProperty( webqit.dom, 'attrInterceptionRecords', { value: new Map } );
 
 	// Interception hooks
 	const attrIntercept = ( record, defaultAction ) => {

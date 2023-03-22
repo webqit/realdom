@@ -50,7 +50,7 @@ export default class Realtime {
 	 * @returns Map
 	 */
 	registry( ...args ) {
-		return _internals( this.window, 'dom.realtime', this.namespace, ...args );
+		return _internals( 'dom.realtime', this.window, this.namespace, ...args );
 	}
 		
 	/**
