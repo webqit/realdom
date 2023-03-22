@@ -40,19 +40,23 @@ export default function() {
  * 
  * @return void
  */
-function ready( callback ) {
+function ready( callback, state = 'interactive' ) {
+    const states = { interactive: [ 'interactive', 'complete' ], complete: [ 'complete' ], };
+    if ( !states[ state ] ) return;
 	const window = this;
-	if ( window.document.readyState === 'complete' ) {
-		callback( window );
-	} else {
-		if ( !window.document.domReadyCallbacks ) {
-			window.document.domReadyCallbacks = [];
-			window.document.addEventListener( 'DOMContentLoaded', () => {
-				window.document.domReadyCallbacks.splice( 0 ).forEach( cb => cb( window ) );
-			}, false );
-		}
-		window.document.domReadyCallbacks.push( callback );
-	}
+    // --------------
+	if ( states[ state ].includes( window.document.readyState ) ) return callback( window );
+    // --------------
+    if ( !window.webqit.dom.readyStateCallbacks ) {
+        window.webqit.dom.readyStateCallbacks = { interactive: [], complete: [] };
+        window.document.addEventListener( 'readystatechange', () => {
+            const state = window.document.readyState;
+            for ( const callback of window.webqit.dom.readyStateCallbacks[ state ].splice( 0 ) ) {
+                callback( window );
+            }
+        }, false );
+    }
+    window.webqit.dom.readyStateCallbacks[ state ].push( callback );
 }
 
 /**
