@@ -21,11 +21,11 @@ const doc = ( head = '', body = '', callback = null, params = {} ) => {
         beforeParse( window ) {
             window.testRecords = [];
             init.call( window );
-            if ( callback ) callback( window, window.document, window.wq.dom );
+            if ( callback ) callback( window, window.document, window.webqit.dom );
         }
     } );
     // --------
-    return [ instance.window, instance.window.document, instance.window.wq.dom ];
+    return [ instance.window, instance.window.document, instance.window.webqit.dom ];
 };
 
 const delay = dur => new Promise( res => setTimeout( res, dur ) );
@@ -40,7 +40,7 @@ describe(`Test: observer`, function() {
 
             const [ window, document ] = doc( '', body );
             const div = document.querySelector( 'div' );
-            window.wq.dom.realtime( div, 'attr' ).get( records => {
+            window.webqit.dom.realtime( div, 'attr' ).get( records => {
                 window.testRecords.push( ...records );
             } );
             await delay( 70 );
@@ -58,7 +58,7 @@ describe(`Test: observer`, function() {
 
             const [ window, document ] = doc( '', body );
             const div = document.querySelector( 'div' );
-            const controller = window.wq.dom.realtime( div, 'attr' ).observe( records => {
+            const controller = window.webqit.dom.realtime( div, 'attr' ).observe( records => {
                 window.testRecords.push( ...records );
             }, { newValue: true, oldValue: true, eventDetails: true } );
             div.setAttribute( 'attr2', 'attr2-value' );
@@ -97,7 +97,7 @@ describe(`Test: observer`, function() {
 
             const [ window, document ] = doc( '', body );
             const div = document.querySelector( 'div' );
-            const controller = window.wq.dom.realtime( div, 'attr' ).observe( records => {
+            const controller = window.webqit.dom.realtime( div, 'attr' ).observe( records => {
                 window.testRecords.push( ...records );
             }, { timing: 'sync', newValue: true, oldValue: true, eventDetails: true } );
             div.setAttribute( 'attr2', 'attr2-value' );

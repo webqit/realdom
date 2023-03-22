@@ -11,25 +11,25 @@ import polyfill from './polyfills.js';
 
 export default function() {
     const window = this;
-    if ( !window.wq ) window.wq = {};
-    if ( window.wq.dom ) return window.wq.dom;
-    window.wq.dom = {};
+    if ( !window.webqit ) window.webqit = {};
+    if ( window.webqit.dom ) return window.webqit.dom;
+    window.webqit.dom = {};
     polyfill.call( window );
     // ------
     const Reflow = _Reflow( window );
-    window.wq.dom.Reflow = new Reflow;
+    window.webqit.dom.Reflow = new Reflow;
     // ------
-    window.wq.dom.DOMRealtime = DOMRealtime;
-    window.wq.dom.AttrRealtime = AttrRealtime;
-    window.wq.dom.realtime = ( context, namespace = 'tree' ) => {
+    window.webqit.dom.DOMRealtime = DOMRealtime;
+    window.webqit.dom.AttrRealtime = AttrRealtime;
+    window.webqit.dom.realtime = ( context, namespace = 'tree' ) => {
         if ( namespace === 'tree' ) return new DOMRealtime( context, window );
         if ( namespace === 'attr' ) return new AttrRealtime( context, window );
     };
     // ------
-    window.wq.dom.ready = ready.bind( window );
-    window.wq.dom.meta = meta.bind( window );
+    window.webqit.dom.ready = ready.bind( window );
+    window.webqit.dom.meta = meta.bind( window );
     // ------
-    return window.wq.dom;
+    return window.webqit.dom;
 }
 
 
@@ -56,43 +56,26 @@ function ready( callback ) {
 }
 
 /**
- * A wq's meta tag props reader.
+ * A webqit's meta tag props reader.
  *  
  * @param String name
- * @param Bool	 readWrite
  * 
  * @return Object
  */
-function meta( name, readWrite = false ) {
+function meta( name ) {
     const window = this;
-    const metaInstance = { content: {} };
-    // Initialize reader
-    if ( !(metaInstance.el = window.document.querySelector( `meta[name="${ name }"]` ) ) && readWrite ) {
-        metaInstance.el = window.document.createElement( 'meta' );
-        metaInstance.el.setAttribute( 'name', name );
-        window.document.head.append( metaInstance.el );
-    }
-    if ( metaInstance.el ) {
-        metaInstance.content = ( metaInstance.el.getAttribute( 'content' ) || '' ).split( ';' ).filter( v => v ).reduce( ( _metaVars, directive ) => {
+    let _content, _el;
+    if ( _el = window.document.querySelector( `meta[name="${ name }"]` ) ) {
+        _content = ( _el.content || '' ).split( ';' ).filter( v => v ).reduce( ( _metaVars, directive ) => {
             const directiveSplit = directive.split( '=' ).map( d => d.trim() );
-            _set( _metaVars, directiveSplit[ 0 ].split( '.' ), directiveSplit[ 1 ] === 'true' 
-                ? true : (directiveSplit[ 1 ] === 'false' ? false : (
+            _set( _metaVars, directiveSplit[ 0 ].split( '.' ), directiveSplit[ 1 ] === 'true' ? true : (directiveSplit[ 1 ] === 'false' ? false : (
                     _isNumeric( directiveSplit[ 1 ] ) ? parseInt( directiveSplit[ 1 ] ) : directiveSplit[ 1 ]
                 ) )
             );
             return _metaVars;
         }, {} );
     }
-    // Read prop...
-    metaInstance.get = function( prop ) { return JSON.parse( JSON.stringify( _get( this.content, prop.split( '.' ) ) ) ); }
-    // Copy...
-    metaInstance.copy = function() {
-		return JSON.parse( JSON.stringify( this.content ) );
-    };
-	// Copy with defaults...
-    metaInstance.copyWithDefaults = function( ...defaults ) {
-		if ( defaults.length ) return _merge( true, {}, ...defaults.reverse().concat( this.content ) );
-		return this.copy();
-    };
-    return metaInstance;
+    return { get name() { return name; }, get content() { return _el.content; }, json() {
+		return JSON.parse( JSON.stringify( _content ) );
+    } };
 }

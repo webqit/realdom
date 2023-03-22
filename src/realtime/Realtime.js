@@ -21,7 +21,7 @@ export default class Realtime {
 		this.namespace = namespace;
 		this.window = context.defaultView || context.ownerDocument?.defaultView || window;
 		this.document = this.window.document;
-		this.wq = this.window.wq;
+		this.webqit = this.window.webqit;
 		Object.defineProperty( this, '#', { value: {} } );
 	}
 
