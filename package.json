@@ -9,7 +9,7 @@
     "reactive DOM library"
   ],
   "homepage": "https://webqit.io/tooling/dom",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "license": "MIT",
   "repository": {
     "type": "git",
