@@ -957,7 +957,7 @@ realtime( element, 'attr' ).get( [ 'attr1', 'attr2', 'attr3' ], handleChanges, {
 + The `realtime` API's unique timing capabilities is based on literal interception of DOM APIs. And here is the complete list of them:
     
     + `Node`: `insertBefore`, `replaceChild`, `removeChild`, `appendChild`, `textContent`, `nodeValue`.
-    + `Element`: `insertAdjacentElement`, `insertAdjacentHTML`, `setHTML`, `replaceChildren`, `replaceWith`, `remove`. `before`, `after`, `append`, `prepend`.
+    + `Element`: `insertAdjacentElement`, `insertAdjacentHTML`, `setHTML`, `replaceChildren`, `replaceWith`, `remove`. `before`, `after`, `append`, `prepend`, `toggleAttribute`, `removeAttribute`, `setAttribute`.
     + `HTMLElement`: `outerText`, `innerText`.
     
     You may need to consider this caveat on your specific usecase.
