@@ -267,7 +267,7 @@ function handleChanges( record ) {
 
 ### Concept: *Static Sensitivity*
 
-When targeting elements using *attribute selectors*, using the `options.staticSensitivity` flag to opt in to statically matching elements based on the attributes mentioned in the selector:
+When targeting elements using *attribute selectors*, use the `options.staticSensitivity` flag to opt in to statically matching elements based on the attributes mentioned in the selector:
 
 ```js
 // Adding the options.staticSensitivity flag
