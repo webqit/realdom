@@ -4,7 +4,7 @@
  */
 import { _isObject } from '@webqit/util/js/index.js';
 import { _from as _arrFrom } from '@webqit/util/arr/index.js';
-import AttrRealtime from './AttrRealtime.js';
+import ATTRRealtime from './ATTRRealtime.js';
 import Realtime from './Realtime.js';
 
 /**
@@ -21,11 +21,11 @@ export default class DOMRealtime extends Realtime {
 	}
 
 	/**
-	 * Alias for ( new AttrRealtime() ).all( ... )
+	 * Alias for ( new ATTRRealtime() ).all( ... )
 	 */
 	attr( filter, callback = undefined, params = {} ) {
 		const { context, window } = this;
-		return ( new AttrRealtime( context, window ) ).get( ...arguments );
+		return ( new ATTRRealtime( context, window ) ).get( ...arguments );
 	}
 
 	/**
@@ -108,8 +108,8 @@ export default class DOMRealtime extends Realtime {
 		// ------------------------
 		const { context, window, webqit, document } = this;
 		// ------------------
-		if ( params.eventDetails ) { webqit.dom.domInterceptionRecordsAlwaysOn = true; }
-		if ( ( document.readyState === 'loading' || webqit.dom.domInterceptionRecordsAlwaysOn ) && !webqit.dom.domInterceptionHooks?.intercepting ) {
+		if ( params.eventDetails ) { webqit.realdom.domInterceptionRecordsAlwaysOn = true; }
+		if ( ( document.readyState === 'loading' || webqit.realdom.domInterceptionRecordsAlwaysOn ) && !webqit.realdom.domInterceptionHooks?.intercepting ) {
 			domInterception.call( window, 'sync', () => {} );
 		}
 		// -------------
@@ -188,7 +188,7 @@ function staticSensitivity( registration ) {
 	exits.push = val => ( entrants.delete( val ), exits.add( val ) );
 	registration.$deliveryCache = { entrants, exits };
 	// ---------
-	return ( new AttrRealtime( context, window ) ).observe( registration.$attrs, _records => {
+	return ( new ATTRRealtime( context, window ) ).observe( registration.$attrs, _records => {
 		const records = new Map, getRecord = target => {
 			if ( !records.has( target ) ) { records.set( target, { target, entrants: [], exits: [], type: 'static', event: null } ); }
 			return records.get( target );
@@ -229,6 +229,7 @@ function dispatch( registration, _record ) {
 	const { context, selectors, callback, params, signalGenerator, $deliveryCache } = registration;
 	// ---------
 	const record = { ..._record, entrants: [], exits: [] };
+	if ( !params.eventDetails ) { delete record.event; }
 	[ 'entrants', 'exits' ].forEach( generation => {
 		if ( params.generation && generation !== params.generation ) return;
 		if ( selectors.length ) {
@@ -304,8 +305,8 @@ function nodesIntersection( targets, sources, deepIntersect ) {
  */
 function withEventDetails( { target, addedNodes, removedNodes } ) {
 	let window = this, event;
-	event = _arrFrom( addedNodes ).reduce( ( prev, node ) => prev || window.webqit.dom.domInterceptionRecords?.get( node ), null );
-	event = _arrFrom( removedNodes ).reduce( ( prev, node ) => prev || window.webqit.dom.domInterceptionRecords?.get( node ), event );
+	event = _arrFrom( addedNodes ).reduce( ( prev, node ) => prev || window.webqit.realdom.domInterceptionRecords?.get( node ), null );
+	event = _arrFrom( removedNodes ).reduce( ( prev, node ) => prev || window.webqit.realdom.domInterceptionRecords?.get( node ), event );
 	event = event || window.document.readyState === 'loading' && 'parse' || 'mutation';
 	return { target, entrants: addedNodes, exits: removedNodes, type: 'observation', event };
 }
@@ -321,29 +322,29 @@ function withEventDetails( { target, addedNodes, removedNodes } ) {
 function domInterception( timing, callback ) {
 	const window = this;
 	const { webqit, document, Node, Element, HTMLElement, HTMLTemplateElement, DocumentFragment } = window;
-	if ( !webqit.dom.domInterceptionHooks ) { Object.defineProperty( webqit.dom, 'domInterceptionHooks', { value: new Map } ); }
-	if ( !webqit.dom.domInterceptionHooks.has( timing ) ) { webqit.dom.domInterceptionHooks.set( timing, new Set ); }
-	webqit.dom.domInterceptionHooks.get( timing ).add( callback );
-	const rm = () => webqit.dom.domInterceptionHooks.get( timing ).delete( callback );
-	if ( webqit.dom.domInterceptionHooks?.intercepting ) return rm;
+	if ( !webqit.realdom.domInterceptionHooks ) { Object.defineProperty( webqit.realdom, 'domInterceptionHooks', { value: new Map } ); }
+	if ( !webqit.realdom.domInterceptionHooks.has( timing ) ) { webqit.realdom.domInterceptionHooks.set( timing, new Set ); }
+	webqit.realdom.domInterceptionHooks.get( timing ).add( callback );
+	const rm = () => webqit.realdom.domInterceptionHooks.get( timing ).delete( callback );
+	if ( webqit.realdom.domInterceptionHooks?.intercepting ) return rm;
 	console.warn( `DOM mutation APIs are now being intercepted.` );
-	webqit.dom.domInterceptionHooks.intercepting = true;
-	Object.defineProperty( webqit.dom, 'domInterceptionRecords', { value: new Map } );
+	webqit.realdom.domInterceptionHooks.intercepting = true;
+	Object.defineProperty( webqit.realdom, 'domInterceptionRecords', { value: new Map } );
 
 	// Interception hooks
-	const shouldObserve = () => true//document.readyState === 'loading' || webqit.dom.domInterceptionRecordsAlwaysOn;
+	const shouldObserve = () => true//document.readyState === 'loading' || webqit.realdom.domInterceptionRecordsAlwaysOn;
 	const intercept = ( record, defaultAction ) => {
 		if ( shouldObserve() ) {
 			record.entrants.concat( record.exits ).forEach( node => {
-				clearTimeout( webqit.dom.domInterceptionRecords.get( node )?.timeout ); // Clear any previous that's still active
-				webqit.dom.domInterceptionRecords.set( node, record.event ); // Main: set event details... and next to timeout details
-				const timeout = setTimeout( () => { webqit.dom.domInterceptionRecords.delete( node ); }, 0 );
+				clearTimeout( webqit.realdom.domInterceptionRecords.get( node )?.timeout ); // Clear any previous that's still active
+				webqit.realdom.domInterceptionRecords.set( node, record.event ); // Main: set event details... and next to timeout details
+				const timeout = setTimeout( () => { webqit.realdom.domInterceptionRecords.delete( node ); }, 0 );
 				Object.defineProperty( record.event, 'timeout', { value: timeout, configurable: true } );
 			} );
-		} else { webqit.dom.domInterceptionRecords.clear(); }
-		webqit.dom.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
+		} else { webqit.realdom.domInterceptionRecords.clear(); }
+		webqit.realdom.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
 		const returnValue = defaultAction();
-		webqit.dom.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
+		webqit.realdom.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
 		return returnValue;
 	};
 
@@ -351,8 +352,8 @@ function domInterception( timing, callback ) {
 	if ( shouldObserve() ) {
 		const mo = new window.MutationObserver( records => records.forEach( record => {
 			if ( Array.isArray( ( record = withEventDetails.call( window, record ) ).event ) ) return;
-			webqit.dom.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
-			webqit.dom.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
+			webqit.realdom.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
+			webqit.realdom.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
 		} ) );
 		mo.observe( document, { childList: true, subtree: true, } );
 		document.addEventListener( 'readystatechange', () => !shouldObserve() && mo.disconnect() );

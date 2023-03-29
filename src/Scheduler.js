@@ -6,38 +6,36 @@
  * ---------------------------
  */
 			
-export default window => class Reflow {
+export default class Scheduler {
 
 	/**
 	 * Starts the loop.
 	 *
 	 * @return this
 	 */
-	constructor( asyncDOM = true ) {
+	constructor( window, asyncDOM = true ) {
 		Object.defineProperty( this, 'window', { value: window } );
 		Object.defineProperty( this, 'readCallbacks', { value: new Set } );
 		Object.defineProperty( this, 'writeCallbacks', { value: new Set } );
 		this.async = asyncDOM;
 		if ( this.window.requestAnimationFrame ) {
-			this._run();
+			this.run();
 		} else {
 			this.async = false;
 		}
 	}
 
-	_run() {
+	#run() {
 		this.window.requestAnimationFrame( () => {
-			this.readCallbacks.forEach( callback => {
-				if ( !callback() ) {
-					this.readCallbacks.delete( callback );
-				}
-			} );
-			this.writeCallbacks.forEach( callback => {
-				if ( !callback() ) {
-					this.writeCallbacks.delete( callback );
-				}
-			} );
-			this._run();
+			for ( const callback of this.readCallbacks ) {
+				callback();
+				this.readCallbacks.delete( callback );
+			}
+			for ( const callback of this.writeCallbacks ) {
+				callback();
+				this.writeCallbacks.delete( callback );
+			}
+			this.run();
 		} );
 	}
 	
@@ -51,12 +49,12 @@ export default window => class Reflow {
 	 */
 	onread( callback, withPromise = false ) {
 		if ( withPromise ) {
-			return new Promise( ( resolve, reject ) => {
+			return new Promise( resolve => {
 				if ( this.async === false ) {
-					callback( resolve, reject );
+					resolve( callback() );
 				} else {
 					this.readCallbacks.add( () => {
-						callback( resolve, reject );
+						resolve( callback() );
 					} );
 				}
 			} );
@@ -78,12 +76,12 @@ export default window => class Reflow {
 	 */
 	onwrite( callback, withPromise = false ) {
 		if ( withPromise ) {
-			return new Promise( ( resolve, reject ) => {
+			return new Promise( resolve => {
 				if ( this.async === false ) {
-					callback( resolve, reject );
+					resolve( callback() );
 				} else {
 					this.writeCallbacks.add( () => {
-						callback( resolve, reject );
+						resolve( callback() );
 					} );
 				}
 			} );

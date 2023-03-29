@@ -21,11 +21,11 @@ const doc = ( head = '', body = '', callback = null, params = {} ) => {
         beforeParse( window ) {
             window.testRecords = [];
             init.call( window );
-            if ( callback ) callback( window, window.document, window.webqit.dom );
+            if ( callback ) callback( window, window.document, window.webqit.realdom );
         }
     } );
     // --------
-    return [ instance.window, instance.window.document, instance.window.webqit.dom ];
+    return [ instance.window, instance.window.document, instance.window.webqit.realdom ];
 };
 
 const delay = dur => new Promise( res => setTimeout( res, dur ) );
@@ -46,7 +46,7 @@ describe(`Test: observer`, function() {
             <div><p>Hello World!</p></div>`;
 
             const [ window, document ] = doc( '', body, null, { runScripts: 'dangerously' } );
-            window.webqit.dom.realtime( document ).subtree( 'h1,p,ul', record => {
+            window.webqit.realdom.realtime( document ).subtree( 'h1,p,ul', record => {
                 window.testRecords.push( record );
             } );
             await delay( 70 );
@@ -75,7 +75,7 @@ describe(`Test: observer`, function() {
             const [ window, document ] = doc( '', body, ( window, document, { Realtime } ) => {
                 // Observer is bound before document is parsed.
                 // Elements are going to show up as they are being parsed.
-                controller = window.webqit.dom.realtime( document ).observe( 'h1,p,ul', record => {
+                controller = window.webqit.realdom.realtime( document ).observe( 'h1,p,ul', record => {
                     window.testRecords.push( record );
                 }, { subtree: true, eventDetails: true } );
             }, { runScripts: 'dangerously' } );
@@ -126,7 +126,7 @@ describe(`Test: observer`, function() {
             const [ window, document ] = doc( '', body, ( window, document, { Realtime } ) => {
                 // Observer is bound before document is parsed.
                 // Elements are going to show up as they are being parsed.
-                controller = window.webqit.dom.realtime( document ).observe( '[style]', record => {
+                controller = window.webqit.realdom.realtime( document ).observe( '[style]', record => {
                     window.testRecords.push( record );
                 }, { subtree: true, staticSensitivity: true, eventDetails: true } );
             }, { runScripts: 'dangerously' } );
@@ -193,7 +193,7 @@ describe(`Test: observer`, function() {
             const [ window, document ] = doc( '', body, ( window, document, { Realtime } ) => {
                 // Observer is bound before document is parsed.
                 // Elements are going to show up as they are being parsed.
-                controller = window.webqit.dom.realtime( document ).observe( 'h1,p,ul', record => {
+                controller = window.webqit.realdom.realtime( document ).observe( 'h1,p,ul', record => {
                     window.testRecords.push( record );
                 }, { subtree: true, timing: 'sync', eventDetails: true } );
             }, { runScripts: 'dangerously' } );
@@ -245,7 +245,7 @@ describe(`Test: observer`, function() {
             const [ window, document ] = doc( '', body, ( window, document, { Realtime } ) => {
                 // Observer is bound before document is parsed.
                 // Elements are going to show up as they are being parsed.
-                controller = window.webqit.dom.realtime( document ).observe( '[style]', record => {
+                controller = window.webqit.realdom.realtime( document ).observe( '[style]', record => {
                     window.testRecords.push( record );
                 }, { subtree: true, timing: 'sync', staticSensitivity: true, eventDetails: true } );
             }, { runScripts: 'dangerously' } );

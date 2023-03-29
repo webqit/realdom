@@ -1,5 +1,5 @@
 {
-  "name": "@webqit/dom",
+  "name": "@webqit/realdom",
   "title": "DOM",
   "description": "Low-level DOM APIs.",
   "keywords": [
@@ -8,15 +8,15 @@
     "realtime-dom",
     "reactive DOM library"
   ],
-  "homepage": "https://webqit.io/tooling/dom",
-  "version": "2.0.8",
+  "homepage": "https://webqit.io/tooling/realdom",
+  "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/webqit/dom.git"
+    "url": "git+https://github.com/webqit/realdom.git"
   },
   "bugs": {
-    "url": "https://github.com/webqit/dom/issues"
+    "url": "https://github.com/webqit/realdom/issues"
   },
   "type": "module",
   "sideEffects": false,
@@ -60,9 +60,9 @@
     "config": {
       "patreonUsername": "ox_harris",
       "githubUsername": "webqit",
-      "githubRepository": "dom",
-      "githubSlug": "webqit/dom",
-      "npmPackageName": "@webqit/dom"
+      "githubRepository": "realdom",
+      "githubSlug": "webqit/realdom",
+      "npmPackageName": "@webqit/realdom"
     }
   }
 }

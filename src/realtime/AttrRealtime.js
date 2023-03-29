@@ -63,7 +63,7 @@ export default class AttrRealtime extends Realtime {
 		// ------------------------
 		const { context, window, webqit } = this;
 		// ------------------
-		if ( params.eventDetails && !webqit.dom.attrInterceptionHooks?.intercepting ) {
+		if ( params.eventDetails && !webqit.realdom.attrInterceptionHooks?.intercepting ) {
 			attrInterception.call( window, 'intercept', () => {} );
 		}
 		// -------------
@@ -150,8 +150,11 @@ function dispatch( registration, records ) {
 		records = attrIntersection( context, filter, records );
 	}
 	// Should we care about old / new values being present?
-	if ( !( params.newValue === null && params.oldValue === null ) ) {
+	if ( !( params.newValue === null && params.oldValue === null && params.eventDetails ) ) {
 		records = records.map( rcd => {
+			if ( !params.eventDetails ) {
+				( { event: exclusion, ...rcd } = rcd );
+			}
 			let exclusion;
 			if ( !params.oldValue && ( 'oldValue' in rcd ) ) {
 				( { oldValue: exclusion, ...rcd } = rcd );
@@ -203,7 +206,7 @@ function attrIntersection( context, filter, records = [] ) {
  * @returns Object
  */
 function withAttrEventDetails( { target, attributeName, value, oldValue } ) {
-	const window = this, registry = window.webqit.dom.attrInterceptionRecords?.get( target ) || {};
+	const window = this, registry = window.webqit.realdom.attrInterceptionRecords?.get( target ) || {};
 	const event = registry[ attributeName ] || 'mutation';
 	const record = { target, name: attributeName, value, oldValue, type: 'observation', event };
 	return record;
@@ -220,28 +223,28 @@ function withAttrEventDetails( { target, attributeName, value, oldValue } ) {
 function attrInterception( timing, callback ) {
 	const window = this;
 	const { webqit, document, Element } = window;
-	if ( !webqit.dom.attrInterceptionHooks ) { Object.defineProperty( webqit.dom, 'attrInterceptionHooks', { value: new Map } ); }
-	if ( !webqit.dom.attrInterceptionHooks.has( timing ) ) { webqit.dom.attrInterceptionHooks.set( timing, new Set ); }
-	webqit.dom.attrInterceptionHooks.get( timing ).add( callback );
-	const rm = () => webqit.dom.attrInterceptionHooks.get( timing ).delete( callback );
-	if ( webqit.dom.attrInterceptionHooks?.intercepting ) return rm;
+	if ( !webqit.realdom.attrInterceptionHooks ) { Object.defineProperty( webqit.realdom, 'attrInterceptionHooks', { value: new Map } ); }
+	if ( !webqit.realdom.attrInterceptionHooks.has( timing ) ) { webqit.realdom.attrInterceptionHooks.set( timing, new Set ); }
+	webqit.realdom.attrInterceptionHooks.get( timing ).add( callback );
+	const rm = () => webqit.realdom.attrInterceptionHooks.get( timing ).delete( callback );
+	if ( webqit.realdom.attrInterceptionHooks?.intercepting ) return rm;
 	console.warn( `Attr mutation APIs are now being intercepted.` );
-	webqit.dom.attrInterceptionHooks.intercepting = true;
-	Object.defineProperty( webqit.dom, 'attrInterceptionRecords', { value: new Map } );
+	webqit.realdom.attrInterceptionHooks.intercepting = true;
+	Object.defineProperty( webqit.realdom, 'attrInterceptionRecords', { value: new Map } );
 
 	// Interception hooks
 	const attrIntercept = ( record, defaultAction ) => {
-		if ( !webqit.dom.attrInterceptionRecords.has( record.target ) ) { webqit.dom.attrInterceptionRecords.set( record.target, {} ); }
-		const registry = webqit.dom.attrInterceptionRecords.get( record.target );
+		if ( !webqit.realdom.attrInterceptionRecords.has( record.target ) ) { webqit.realdom.attrInterceptionRecords.set( record.target, {} ); }
+		const registry = webqit.realdom.attrInterceptionRecords.get( record.target );
 		// ------------------
 		clearTimeout( registry[ record.name ]?.timeout ); // Clear any previous that's still active
 		registry[ record.name ] = record.event; // Main: set event details... and next to timeout details
 		const timeout = setTimeout( () => { delete registry[ record.name ]; }, 0 );
 		Object.defineProperty( record.event, 'timeout', { value: timeout, configurable: true } );
 		// ------------------
-		webqit.dom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( [ record ] ) );
+		webqit.realdom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( [ record ] ) );
 		const returnValue = defaultAction();
-		webqit.dom.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( [ record ] ) );
+		webqit.realdom.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( [ record ] ) );
 		return returnValue;
 	};
 
@@ -251,8 +254,8 @@ function attrInterception( timing, callback ) {
 			return !Array.isArray( rcd.event );
 		} );
 		if ( !records.length ) return;
-		webqit.dom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( records ) );
-		webqit.dom.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( records ) );
+		webqit.realdom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( records ) );
+		webqit.realdom.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( records ) );
 	} );
 	mo.observe( document, { attributes: true, subtree: true, attributeOldValue: true } );
 
