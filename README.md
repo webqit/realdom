@@ -239,7 +239,12 @@ function handleChanges( record ) {
 }
 ```
 
-**-->** Use the `options.generation` flag to only receive either the `entrants` or `exits` list:
+**-->** Use the `options.generation` parameter to require only either the `entrants` or `exits` list:
+
+```js
+// Requiring only the "entrants" list
+realtime( document.body ).observe( handleChanges, { generation: 'entrants' } );
+```
 
 ```js
 // Handling just record.entrants
