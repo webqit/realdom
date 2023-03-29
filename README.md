@@ -10,7 +10,7 @@ A small, low-level utility for working with the (real) DOM in realtime!
 
 ## Documentation
 
-*(Early stage)*
+> **Info** This is *(Early stage)* documentation for `v2.x`. (Looking for [`v1.x`](https://github.com/webqit/realdom/tree/v1.0.3)?)
 
 + [Download Options](#download-options)
 + [The Ready-State API](#the-ready-state-api)

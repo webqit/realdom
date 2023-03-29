@@ -1,6 +1,6 @@
 {
   "name": "@webqit/realdom",
-  "title": "DOM",
+  "title": "RealDOM",
   "description": "Low-level DOM APIs.",
   "keywords": [
     "DOM",
