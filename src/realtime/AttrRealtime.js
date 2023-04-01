@@ -152,10 +152,10 @@ function dispatch( registration, records ) {
 	// Should we care about old / new values being present?
 	if ( !( params.newValue === null && params.oldValue === null && params.eventDetails ) ) {
 		records = records.map( rcd => {
+			let exclusion;
 			if ( !params.eventDetails ) {
 				( { event: exclusion, ...rcd } = rcd );
 			}
-			let exclusion;
 			if ( !params.oldValue && ( 'oldValue' in rcd ) ) {
 				( { oldValue: exclusion, ...rcd } = rcd );
 			}
