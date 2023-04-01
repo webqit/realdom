@@ -19,13 +19,13 @@ export default class Scheduler {
 		Object.defineProperty( this, 'writeCallbacks', { value: new Set } );
 		this.async = asyncDOM;
 		if ( this.window.requestAnimationFrame ) {
-			this.run();
+			this._run();
 		} else {
 			this.async = false;
 		}
 	}
 
-	#run() {
+	_run() {
 		this.window.requestAnimationFrame( () => {
 			for ( const callback of this.readCallbacks ) {
 				callback();
@@ -35,7 +35,7 @@ export default class Scheduler {
 				callback();
 				this.writeCallbacks.delete( callback );
 			}
-			this.run();
+			this._run();
 		} );
 	}
 	
