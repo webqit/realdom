@@ -180,8 +180,10 @@ export default class DOMRealtime extends Realtime {
 function staticSensitivity( registration ) {
 	const window = this;
 	const { context, selectors, callback, params, signalGenerator } = registration;
-	const parse = selector => [ ...selector.matchAll(/\[([^\=\]]+)(\=[^\]]+)?\]/g) ].map( x => x[ 1 ] );
-	if ( !( registration.$attrs = selectors.filter( s => typeof s === 'string' && s.includes( '[' ) ).reduce( ( attrs, selector ) => attrs.concat( parse( selector ) ), [] ) ).length ) return;
+	const parseDot = selector => selector.match( /\.([\w-]+)/g )?.length ? [ 'class' ] : [];
+	const parseHash = selector => selector.match( /#([\w-]+)/g )?.length ? [ 'id' ] : [];
+	const parse = selector => [ ...selector.matchAll(/\[([^\=\]]+)(\=[^\]]+)?\]/g) ].map( x => x[ 1 ] ).concat( parseDot( selector ) ).concat( parseHash( selector ) );
+	if ( !( registration.$attrs = Array.from( new Set( selectors.filter( s => typeof s === 'string' && s.includes( '[' ) ).reduce( ( attrs, selector ) => attrs.concat( parse( selector ) ), [] ) ) ) ).length ) return;
 	// ---------
 	const entrants = new Set, exits = new Set;
 	entrants.push = val => ( exits.delete( val ), entrants.add( val ) );
