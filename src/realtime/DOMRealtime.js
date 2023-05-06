@@ -149,8 +149,14 @@ export default class DOMRealtime extends Realtime {
 				this.forEachMatchingContext( interceptionTiming, record, dispatch );
 			} );
 		}
+		const mo = new window.MutationObserver( records => records.forEach( record => {
+			if ( Array.isArray( ( record = withEventDetails.call( window, record ) ).event ) ) return;
+			dispatch.call( window, registration, record, context );
+		} ) );
+		mo.observe( context, { childList: true, subtree: params.subtree } );
 		// -------------
 		const disconnectable = { disconnect() {
+			mo.disconnect();
 			registry.delete( registration );
 			if ( !registry.size ) { registries.delete( context ); }
 		} };
@@ -334,32 +340,18 @@ function domInterception( timing, callback ) {
 	Object.defineProperty( webqit.realdom, 'domInterceptionRecords', { value: new Map } );
 
 	// Interception hooks
-	const shouldObserve = () => true//document.readyState === 'loading' || webqit.realdom.domInterceptionRecordsAlwaysOn;
 	const intercept = ( record, defaultAction ) => {
-		if ( shouldObserve() ) {
-			record.entrants.concat( record.exits ).forEach( node => {
-				clearTimeout( webqit.realdom.domInterceptionRecords.get( node )?.timeout ); // Clear any previous that's still active
-				webqit.realdom.domInterceptionRecords.set( node, record.event ); // Main: set event details... and next to timeout details
-				const timeout = setTimeout( () => { webqit.realdom.domInterceptionRecords.delete( node ); }, 0 );
-				Object.defineProperty( record.event, 'timeout', { value: timeout, configurable: true } );
-			} );
-		} else { webqit.realdom.domInterceptionRecords.clear(); }
+		record.entrants.concat( record.exits ).forEach( node => {
+			clearTimeout( webqit.realdom.domInterceptionRecords.get( node )?.timeout ); // Clear any previous that's still active
+			webqit.realdom.domInterceptionRecords.set( node, record.event ); // Main: set event details... and next to timeout details
+			const timeout = setTimeout( () => { webqit.realdom.domInterceptionRecords.delete( node ); }, 0 );
+			Object.defineProperty( record.event, 'timeout', { value: timeout, configurable: true } );
+		} );
 		webqit.realdom.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
 		const returnValue = defaultAction();
 		webqit.realdom.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
 		return returnValue;
 	};
-
-	// Interception observer WILL need to know non-API-based mutations
-	if ( shouldObserve() ) {
-		const mo = new window.MutationObserver( records => records.forEach( record => {
-			if ( Array.isArray( ( record = withEventDetails.call( window, record ) ).event ) ) return;
-			webqit.realdom.domInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( record ) );
-			webqit.realdom.domInterceptionHooks.get( 'sync' )?.forEach( callback => callback( record ) );
-		} ) );
-		mo.observe( document, { childList: true, subtree: true, } );
-		document.addEventListener( 'readystatechange', () => !shouldObserve() && mo.disconnect() );
-	}
 
 	// Intercept DOM mutation methods
 	const originalApis = Object.create( null );
