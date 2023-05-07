@@ -4,7 +4,7 @@
  */
 import { _isObject } from '@webqit/util/js/index.js';
 import { _from as _arrFrom } from '@webqit/util/arr/index.js';
-import ATTRRealtime from './ATTRRealtime.js';
+import AttrRealtime from './AttrRealtime.js';
 import Realtime from './Realtime.js';
 
 /**
@@ -21,11 +21,11 @@ export default class DOMRealtime extends Realtime {
 	}
 
 	/**
-	 * Alias for ( new ATTRRealtime() ).all( ... )
+	 * Alias for ( new AttrRealtime() ).all( ... )
 	 */
 	attr( filter, callback = undefined, params = {} ) {
 		const { context, window } = this;
-		return ( new ATTRRealtime( context, window ) ).get( ...arguments );
+		return ( new AttrRealtime( context, window ) ).get( ...arguments );
 	}
 
 	/**
@@ -196,7 +196,7 @@ function staticSensitivity( registration ) {
 	exits.push = val => ( entrants.delete( val ), exits.add( val ) );
 	registration.$deliveryCache = { entrants, exits };
 	// ---------
-	return ( new ATTRRealtime( context, window ) ).observe( registration.$attrs, _records => {
+	return ( new AttrRealtime( context, window ) ).observe( registration.$attrs, _records => {
 		const records = new Map, getRecord = target => {
 			if ( !records.has( target ) ) { records.set( target, { target, entrants: [], exits: [], type: 'static', event: null } ); }
 			return records.get( target );
@@ -329,7 +329,7 @@ function withEventDetails( { target, addedNodes, removedNodes } ) {
  */
 function domInterception( timing, callback ) {
 	const window = this;
-	const { webqit, document, Node, Element, HTMLElement, HTMLTemplateElement, DocumentFragment } = window;
+	const { webqit, document, Node, CharacterData, Element, HTMLElement, HTMLTemplateElement, DocumentFragment } = window;
 	if ( !webqit.realdom.domInterceptionHooks ) { Object.defineProperty( webqit.realdom, 'domInterceptionHooks', { value: new Map } ); }
 	if ( !webqit.realdom.domInterceptionHooks.has( timing ) ) { webqit.realdom.domInterceptionHooks.set( timing, new Set ); }
 	webqit.realdom.domInterceptionHooks.get( timing ).add( callback );
@@ -354,21 +354,16 @@ function domInterception( timing, callback ) {
 	};
 
 	// Intercept DOM mutation methods
-	const originalApis = Object.create( null );
+	const _originalApis = { characterData: Object.create( null ), other: Object.create( null ) };
 	[ 'insertBefore'/*Node*/, 'insertAdjacentElement', 'insertAdjacentHTML', 'setHTML',
 		'replaceChildren', 'replaceWith', 'remove', 'replaceChild'/*Node*/, 'removeChild'/*Node*/, 
 		'before', 'after', 'append', 'prepend', 'appendChild'/*Node*/, 
 	].forEach( apiName => {
-		// We'll be sure to monkey the correct interface
-		const Interface = [ 'insertBefore', 'replaceChild', 'removeChild', 'appendChild' ].includes( apiName ) ? Node : Element;
-		originalApis[ apiName ] = Interface.prototype[ apiName ];
-		// In case newer methods like setHTML() are not supported
-		if ( !originalApis[ apiName ] ) return;
-		// Monkey now...
-		Interface.prototype[ apiName ] = function( ...args ) {
+		function method( ...args ) {
+			const originalApis = this instanceof CharacterData ? _originalApis.characterData : _originalApis.other;
 			// Instance of Node interface? Abort!
 			const exec = () => originalApis[ apiName ].call( this, ...args );
-			if ( !( this instanceof Element || this instanceof DocumentFragment ) ) return exec();
+			if ( !( this instanceof CharacterData || this instanceof Element || this instanceof DocumentFragment ) ) return exec();
 			// --------------
 			// Obtain exits and entrants
 			let exits = [], entrants = [], target = this;
@@ -428,8 +423,25 @@ function domInterception( timing, callback ) {
 				return originalApis[ apiNameFinal ].call( this, ...args );
 			} );
 		}
+		// We'll be sure to monkey the correct interface
+		if ( [ 'insertBefore', 'replaceChild', 'removeChild', 'appendChild' ].includes( apiName ) ) {
+			_originalApis.other[ apiName ] = Node.prototype[ apiName ];
+			Node.prototype[ apiName ] = method;
+		} else {
+			// Comment nodes have this methods too
+			if ( [ 'after', 'before', 'remove', 'replaceWith' ].includes( apiName ) ) {
+				_originalApis.characterData[ apiName ] = CharacterData.prototype[ apiName ];
+				CharacterData.prototype[ apiName ] = method;
+			}
+			// In case newer methods like setHTML() are not supported
+			if ( Element.prototype[ apiName ] ) {
+				_originalApis.other[ apiName ] = Element.prototype[ apiName ];
+				Element.prototype[ apiName ] = method;
+			}
+		}
 	} );
 
+	const originalApis = Object.create( null );
 	// Intercept DOM mutation properties
 	[ 'outerHTML', 'outerText'/*HTMLElement*/, 'innerHTML', 
 		'innerText'/*HTMLElement*/,'textContent'/*Node*/, 'nodeValue'/*Node*/

@@ -6,7 +6,7 @@ import { _isNumeric, _isString, _isFunction } from '@webqit/util/js/index.js';
 import { _set } from '@webqit/util/obj/index.js';
 import Scheduler from './Scheduler.js';
 import DOMRealtime from './realtime/DOMRealtime.js';
-import ATTRRealtime from './realtime/ATTRRealtime.js';
+import AttrRealtime from './realtime/AttrRealtime.js';
 import polyfill from './polyfills.js';
 
 export default function() {
@@ -21,7 +21,7 @@ export default function() {
     // ------
     window.webqit.realdom.realtime = ( context, namespace = 'dom' ) => {
         if ( namespace === 'dom' ) return new DOMRealtime( context, window );
-        if ( namespace === 'attr' ) return new ATTRRealtime( context, window );
+        if ( namespace === 'attr' ) return new AttrRealtime( context, window );
     };
     // ------
     const scheduler = new Scheduler( window );
