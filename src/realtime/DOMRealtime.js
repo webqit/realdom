@@ -138,7 +138,7 @@ export default class DOMRealtime extends Realtime {
 	 */
 	observeSync( selectors, callback, params = {} ) {
 		[ selectors, callback, params = {} ] = this.resolveArgs( arguments );
-		const { context, window } = this;
+		const { context, window } = this;		
 		// -------------
 		if ( params.timing && ![ 'sync', 'intercept' ].includes( params.timing ) ) throw new Error( `Timing option "${ params.timing }" invalid.` );
 		const interceptionTiming = params.timing === 'intercept' ? 'intercept' : 'sync';

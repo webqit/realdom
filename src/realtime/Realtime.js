@@ -39,6 +39,9 @@ export default class Realtime {
 		} else if ( _isObject( args[ 1 ] ) && args.length === 2 ) {
 			args = [ _arrFrom( args[ 0 ], false/*castObject*/ ), undefined, args[ 1 ] ];
 		} else { args[ 0 ] = _arrFrom( args[ 0 ], false/*castObject*/ ); }
+		if ( args[ 0 ].filter( x => typeof x !== 'string' && !( x instanceof this.window.Node ) ).length ) {
+			throw new Error( `Argument #2 must be either a string or a Node object, or a list of those.` );
+		}
 		return args;
 	}
 
