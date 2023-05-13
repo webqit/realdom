@@ -484,12 +484,12 @@ function domInterception( timing, callback ) {
 					value = new DocumentFragment;
 					value.______isTemp = true;
 					value.append( ...temp.childNodes );
-					exec = () => originalApis.replaceWith.call( this, value );
+					exec = () => Element.prototype.replaceWith.call( this, value );
 				} else {
 					if ( this instanceof HTMLTemplateElement ) {
 						exec = () => this.content.replaceChildren( ...temp.childNodes );
 					} else {
-						exec = () => originalApis.replaceChildren.call( this, ...temp.childNodes );
+						exec = () => Element.prototype.replaceChildren.call( this, ...temp.childNodes );
 					}
 				}
 			}
