@@ -148,7 +148,10 @@ function dispatch( registration, records ) {
 	const { context, filter, callback, params, atomics, originalFilterIsString, signalGenerator } = registration;
 	if ( params.atomic && !atomics.size ) {
 		records = attrIntersection( context, filter, records );
+	} else if ( params.timing !== 'async' && filter.length ) {
+		records = records.filter( r => filter.includes( r.name ) );
 	}
+	if ( !records.length ) return;
 	// Should we care about old / new values being present?
 	if ( !( params.newValue === null && params.oldValue === null && params.eventDetails ) ) {
 		records = records.map( rcd => {
