@@ -24,7 +24,7 @@ export default class Realtime {
 		this.webqit = this.window.webqit;
 		Object.defineProperty( this, '#', { value: {} } );
 	}
-
+	
 	/**
 	 * Resolves arguments
 	 * 

@@ -52,7 +52,7 @@ describe(`Test: observer`, function() {
 
     describe(`Attr Observe`, function() {
 
-        it(`Should do basic observe (async)`, async function() {
+        it(`Should do basic observe (sync)`, async function() {
             const body = `
             <div attr1="attr1-value"></div>`;
 
@@ -60,7 +60,7 @@ describe(`Test: observer`, function() {
             const div = document.querySelector( 'div' );
             const controller = window.webqit.realdom.realtime( div, 'attr' ).observe( records => {
                 window.testRecords.push( ...records );
-            }, { newValue: true, oldValue: true, eventDetails: true } );
+            }, { timing: 'sync', newValue: true, oldValue: true, eventDetails: true } );
             div.setAttribute( 'attr2', 'attr2-value' );
             await delay( 70 );
             // -----------------

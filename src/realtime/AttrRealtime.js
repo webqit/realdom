@@ -210,7 +210,7 @@ function attrIntersection( context, filter, records = [] ) {
  */
 function withAttrEventDetails( { target, attributeName, value, oldValue } ) {
 	const window = this, registry = window.webqit.realdom.attrInterceptionRecords?.get( target ) || {};
-	const event = registry[ attributeName ] || 'mutation';
+	const event = registry[ attributeName ]?.[ 0 ] || 'mutation';
 	const record = { target, name: attributeName, value, oldValue, type: 'observation', event };
 	return record;
 }
@@ -240,10 +240,8 @@ function attrInterception( timing, callback ) {
 		if ( !webqit.realdom.attrInterceptionRecords.has( record.target ) ) { webqit.realdom.attrInterceptionRecords.set( record.target, {} ); }
 		const registry = webqit.realdom.attrInterceptionRecords.get( record.target );
 		// ------------------
-		clearTimeout( registry[ record.name ]?.timeout ); // Clear any previous that's still active
-		registry[ record.name ] = record.event; // Main: set event details... and next to timeout details
-		const timeout = setTimeout( () => { delete registry[ record.name ]; }, 0 );
-		Object.defineProperty( record.event, 'timeout', { value: timeout, configurable: true } );
+		registry[ record.name ] = registry[ record.name ] || [];
+		registry[ record.name ].unshift( record.event );
 		// ------------------
 		webqit.realdom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( [ record ] ) );
 		const returnValue = defaultAction();
@@ -253,9 +251,11 @@ function attrInterception( timing, callback ) {
 
 	// Interception observer WILL need to know non-API-based mutations
 	const mo = new window.MutationObserver( records => {
-		records = dedup( records ).map( rcd => withAttrEventDetails.call( window, rcd ) ).filter( ( rcd, i ) => {
-			return !Array.isArray( rcd.event );
+		records = records.filter( rcd => {
+			const registry = window.webqit.realdom.attrInterceptionRecords?.get( rcd.target ) || {};
+			return !registry[ rcd.attributeName ]?.shift();
 		} );
+		records = dedup( records ).map( rcd => withAttrEventDetails.call( window, rcd ) );
 		if ( !records.length ) return;
 		webqit.realdom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( records ) );
 		webqit.realdom.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( records ) );

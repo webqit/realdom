@@ -6,6 +6,7 @@ import { _isObject } from '@webqit/util/js/index.js';
 import { _from as _arrFrom } from '@webqit/util/arr/index.js';
 import AttrRealtime from './AttrRealtime.js';
 import Realtime from './Realtime.js';
+import * as xpath from './Xpath.js';
 
 /**
  *
@@ -50,10 +51,18 @@ export default class DOMRealtime extends Realtime {
 			if ( !selectors.length ) {
 				//if ( params.subtree ) throw new Error( `The subtree option requires a selector to work.` );
 				[ ...context.children ].forEach( node => getRecord( context ).entrants.push( node ) );
-			} else if ( selectors.every( selector => typeof selector === 'string' ) && ( selectors = selectors.join( ',' ) ) ) {
-				const matches = params.subtree
-					? context.querySelectorAll( selectors )
-					: [ ...context.children ].filter( node => node.matches( selectors ) );
+			} else if ( selectors.every( selector => typeof selector === 'string' ) ) {
+				const [ cssSelectors, xpathQueries ] = selectors.reduce( ( [ c, x ], selector ) => {
+					return xpath.isXpath( selector ) ? [ c, x && `${ x }|${ selector }` || selector ] : [ c && `${ c },${ selector }` || selector, x ];
+				}, [ '', '' ] );
+				const matches = [];
+				if ( params.subtree ) {
+					if ( cssSelectors.length ) { matches.push( ...context.querySelectorAll( cssSelectors ) ); }
+					if ( xpathQueries.length ) { matches.push( ...xpath.query( this.window, context, xpathQueries, true ) ); }
+				} else {
+					if ( cssSelectors.length ) { matches.push( ...[ ...context.children ].filter( node => node.matches( cssSelectors ) ) ); }
+					if ( xpathQueries.length ) { matches.push( ...[ ...context.childNodes ].filter( node => xpath.match( this.window, node, xpathQueries, true  ) ) ); }
+				}
 				matches.forEach( node => getRecord( node.parentNode || context ).entrants.push( node ) );
 			}
 		}
@@ -186,10 +195,11 @@ export default class DOMRealtime extends Realtime {
 function staticSensitivity( registration ) {
 	const window = this;
 	const { context, selectors, callback, params, signalGenerator } = registration;
+	const cssSelectors = selectors.filter( s => typeof s === 'string' && !xpath.isXpath( s ) );
 	const parseDot = selector => selector.match( /\.([\w-]+)/g )?.length ? [ 'class' ] : [];
 	const parseHash = selector => selector.match( /#([\w-]+)/g )?.length ? [ 'id' ] : [];
-	const parse = selector => [ ...selector.matchAll(/\[([^\=\]]+)(\=[^\]]+)?\]/g) ].map( x => x[ 1 ] ).concat( parseDot( selector ) ).concat( parseHash( selector ) );
-	if ( !( registration.$attrs = Array.from( new Set( selectors.filter( s => typeof s === 'string' && s.includes( '[' ) ).reduce( ( attrs, selector ) => attrs.concat( parse( selector ) ), [] ) ) ) ).length ) return;
+	const parse = selector => [ ...selector.matchAll( /\[([^\=\]]+)(\=[^\]]+)?\]/g ) ].map( x => x[ 1 ] ).concat( parseDot( selector ) ).concat( parseHash( selector ) );
+	if ( !( registration.$attrs = Array.from( new Set( cssSelectors.filter( s => s.includes( '[' ) ).reduce( ( attrs, selector ) => attrs.concat( parse( selector ) ), [] ) ) ) ).length ) return;
 	// ---------
 	const entrants = new Set, exits = new Set;
 	entrants.push = val => ( exits.delete( val ), entrants.add( val ) );
@@ -204,7 +214,7 @@ function staticSensitivity( registration ) {
 		// ---------
 		const matchesCache = new WeakMap;
 		const matches = node => {
-			if ( !matchesCache.has( node ) ) { matchesCache.set( node, selectors.some( selector => node.matches( selector ) ) ); }
+			if ( !matchesCache.has( node ) ) { matchesCache.set( node, cssSelectors.some( selector => node.matches( selector ) ) ); }
 			return matchesCache.get( node );
 		};
 		// ---------
@@ -241,7 +251,7 @@ function dispatch( registration, _record ) {
 	[ 'entrants', 'exits' ].forEach( generation => {
 		if ( params.generation && generation !== params.generation ) return;
 		if ( selectors.length ) {
-			record[ generation ] = nodesIntersection( selectors, _record[ generation ], _record.event !== 'parse' );
+			record[ generation ] = nodesIntersection.call( this, selectors, _record[ generation ], _record.event !== 'parse' );
 		} else {
 			record[ generation ] = [ ..._record[ generation ] ];
 		}
@@ -269,13 +279,13 @@ function nodesIntersection( targets, sources, deepIntersect ) {
 	sources = Array.isArray( sources ) ? sources : [ ...sources ];
 	const match = ( sources, target ) => {
 		// Filter out text nodes
-		sources = sources.filter( source => source.matches );
 		if ( typeof target === 'string' ) {
 			// Is directly mutated...
-			let matches = sources.filter( source => source.matches( target ) );
+			let matches = sources.filter( source => xpath.isXpath( target ) ? xpath.match( this, source, target ) : source.matches && source.matches( target ) );
 			// Is contextly mutated...
 			if ( deepIntersect ) {
 				matches = sources.reduce( ( collection, source ) => {
+					if ( xpath.isXpath( target ) ) { return [ ...collection, ...xpath.query( this, source, target ) ]; }
 					return [ ...collection, ...source.querySelectorAll( target ) ];
 				}, matches );
 			}

@@ -142,8 +142,9 @@ describe(`Test: observer`, function() {
             expect( window.testRecords ).to.have.length( 3 );
             expect( window.testRecords[ 2 ].entrants ).to.be.an( 'array' ).with.length( 1 );
             expect( window.testRecords[ 2 ].exits ).to.be.an( 'array' ).with.length( 0 );
-            expect( window.testRecords[ 2 ].event ).to.be.an( 'array' ).with.length( 2 );
-            expect( window.testRecords[ 2 ].event[ 1 ] ).to.eq( 'toggleAttribute' );
+            // ASYNC can no longer record sync events
+            //expect( window.testRecords[ 2 ].event ).to.be.an( 'array' ).with.length( 2 );
+            //expect( window.testRecords[ 2 ].event[ 1 ] ).to.eq( 'toggleAttribute' );
             // -----------------
             let section = document.createElement( 'section' );
             let p = document.createElement( 'p' );
