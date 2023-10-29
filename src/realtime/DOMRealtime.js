@@ -286,7 +286,7 @@ function nodesIntersection( targets, sources, deepIntersect ) {
 			if ( deepIntersect ) {
 				matches = sources.reduce( ( collection, source ) => {
 					if ( xpath.isXpath( target ) ) { return [ ...collection, ...xpath.query( this, source, target ) ]; }
-					return [ ...collection, ...source.querySelectorAll( target ) ];
+					return source.querySelectorAll ? [ ...collection, ...source.querySelectorAll( target ) ] : collection;
 				}, matches );
 			}
 			if ( matches.length ) return matches;
