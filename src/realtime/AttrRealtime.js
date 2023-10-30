@@ -32,11 +32,17 @@ export default class AttrRealtime extends Realtime {
 		const { context } = this;
 		// -------------
 		const records = attrIntersection( context, filter );
-		const record_s = originalFilterIsString ? records[ 0 ] : records;
-		if ( !callback ) return record_s;
-		const signalGenerator = callback && params.lifecycleSignals && this.createSignalGenerator();
-		const flags = signalGenerator?.generate() || {};
-		callback( record_s, flags, context );
+		if ( !callback ) return records;
+		const signalGenerator = params.lifecycleSignals && this.createSignalGenerator();
+		if ( !originalFilterIsString ) {
+			const flags = signalGenerator?.generate() || {};
+			callback( records, flags, context );
+		} else {
+			for ( const record of records ) {
+				const flags = signalGenerator?.generate() || {};
+				callback( record, flags, context );
+			}
+		}
 		// -------------
 		if ( params.live ) {
 			if ( signalGenerator ) { params = { ...params, signalGenerator }; }
