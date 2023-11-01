@@ -3,6 +3,7 @@
  * @imports
  */
 import Realtime from './Realtime.js';
+import DOMSpec from './DOMSpec.js';
 
 /**
  *
@@ -20,18 +21,18 @@ export default class AttrRealtime extends Realtime {
 	/**
 	 * Runs a query.
 	 *
-	 * @param array|string				filter
+	 * @param array|string				spec
 	 * @param function					callback
 	 * @param object					params
 	 *
 	 * @return Disconnectable|Void
 	 */
-	get( filter, callback = undefined, params = {} ) {
-		const originalFilterIsString = typeof filter === 'string';
-		[ filter = [], callback = undefined, params = {} ] = this.resolveArgs( arguments );
+	get( spec, callback = undefined, params = {} ) {
+		const originalFilterIsString = typeof spec === 'string' || spec instanceof DOMSpec;
+		[ spec = [], callback = undefined, params = {} ] = this.resolveArgs( arguments );
 		const { context } = this;
 		// -------------
-		const records = attrIntersection( context, filter );
+		const records = attrIntersection( context, spec );
 		if ( !callback ) return records;
 		const signalGenerator = params.lifecycleSignals && this.createSignalGenerator();
 		if ( !originalFilterIsString ) {
@@ -46,7 +47,7 @@ export default class AttrRealtime extends Realtime {
 		// -------------
 		if ( params.live ) {
 			if ( signalGenerator ) { params = { ...params, signalGenerator }; }
-			const disconnectable_live = this.observe( originalFilterIsString ? filter[ 0 ] : filter, callback, { newValue: true, ...params } );
+			const disconnectable_live = this.observe( originalFilterIsString ? spec[ 0 ] : spec, callback, { newValue: true, ...params } );
 			return this.disconnectables( params.signal, disconnectable_live );
 		}
 	}
@@ -54,17 +55,17 @@ export default class AttrRealtime extends Realtime {
 	/**
 	 * Mutation Observer
 	 * 
-	 * @param array|string				filter
+	 * @param array|string				spec
 	 * @param function					callback
 	 * @param object					params
 	 * 
 	 * @returns Disconnectable
 	 */
-	observe( filter, callback, params = {} ) {
-		const originalFilterIsString = typeof filter === 'string';
-		[ filter = [], callback, params = {} ] = this.resolveArgs( arguments );
+	observe( spec, callback, params = {} ) {
+		const originalFilterIsString = typeof spec === 'string' || spec instanceof DOMSpec;
+		[ spec = [], callback, params = {} ] = this.resolveArgs( arguments );
 		// ------------------------
-		if ( [ 'sync', 'intercept' ].includes( params.timing ) ) return this.observeSync( originalFilterIsString ? filter[ 0 ] : filter, callback, params );
+		if ( [ 'sync', 'intercept' ].includes( params.timing ) ) return this.observeSync( originalFilterIsString ? spec[ 0 ] : spec, callback, params );
 		if ( params.timing && params.timing !== 'async' ) throw new Error( `Timing option "${ params.timing }" invalid.` );
 		// ------------------------
 		const { context, window, webqit } = this;
@@ -79,11 +80,11 @@ export default class AttrRealtime extends Realtime {
 		} );
 		// ------------------
 		const $params = { attributes: true, attributeOldValue: params.oldValue, subtree: params.subtree };
-		if ( filter.length ) { $params.attributeFilter = filter; }
+		if ( spec.length ) { $params.attributeFilter = spec.map( a => a + '' ); }
 		disconnectable.observe( context, $params );
 		// -------------
 		const signalGenerator = params.signalGenerator || params.lifecycleSignals && this.createSignalGenerator();
-		const registration = { context, filter, callback, params, atomics: new Map, originalFilterIsString, signalGenerator, disconnectable };
+		const registration = { context, spec, callback, params, atomics: new Map, originalFilterIsString, signalGenerator, disconnectable };
 		// -------------
 		return this.disconnectables( params.signal, disconnectable, signalGenerator );
 	}
@@ -91,15 +92,15 @@ export default class AttrRealtime extends Realtime {
 	/**
 	 * Mutation Interceptor
 	 * 
-	 * @param array|string				filter
+	 * @param array|string				spec
 	 * @param function					callback
 	 * @param object					params
 	 * 
 	 * @returns Disconnectable
 	 */
-	observeSync( filter, callback, params = {} ) {
-		const originalFilterIsString = typeof filter === 'string';
-		[ filter, callback, params = {} ] = this.resolveArgs( arguments );
+	observeSync( spec, callback, params = {} ) {
+		const originalFilterIsString = typeof spec === 'string' || spec instanceof DOMSpec;
+		[ spec, callback, params = {} ] = this.resolveArgs( arguments );
 		const { context, window } = this;
 		// -------------
 		if ( params.timing && ![ 'sync', 'intercept' ].includes( params.timing ) ) throw new Error( `Timing option "${ params.timing }" invalid.` );
@@ -117,7 +118,7 @@ export default class AttrRealtime extends Realtime {
 			if ( !registry.size ) { registries.delete( context ); }
 		} };
 		const signalGenerator = params.signalGenerator || params.lifecycleSignals && this.createSignalGenerator();
-		const registration = { context, filter, callback, params, atomics: new Map, originalFilterIsString, signalGenerator, disconnectable };
+		const registration = { context, spec, callback, params, atomics: new Map, originalFilterIsString, signalGenerator, disconnectable };
 		// -------------
 		const registries = this.registry( interceptionTiming, intersectionDepth );
 		if ( !registries.has( context ) ) { registries.set( context, new Set ); }
@@ -151,11 +152,12 @@ function dedup( records ) {
  * @returns Void
  */
 function dispatch( registration, records ) {
-	const { context, filter, callback, params, atomics, originalFilterIsString, signalGenerator } = registration;
+	const { context, spec, callback, params, atomics, originalFilterIsString, signalGenerator } = registration;
+	const $spec = spec.map( a => a + '' );
 	if ( params.atomic && !atomics.size ) {
-		records = attrIntersection( context, filter, records );
-	} else if ( params.timing !== 'async' && filter.length ) {
-		records = records.filter( r => filter.includes( r.name ) );
+		records = attrIntersection( context, spec, records );
+	} else if ( params.timing !== 'async' && spec.length ) {
+		records = records.filter( r => $spec.includes( r.name ) );
 	}
 	if ( !records.length ) return;
 	// Should we care about old / new values being present?
@@ -189,15 +191,16 @@ function dispatch( registration, records ) {
  * Helper to determining which records to deliver.
  * 
  * @param Object 			context
- * @param Array 			filter
+ * @param Array 			spec
  * @param Array 			records
  * 
  * @returns Array
  */
-function attrIntersection( context, filter, records = [] ) {
+function attrIntersection( context, spec, records = [] ) {
 	const _type = { event: null, type: 'attribute' };
-	if ( filter.length ) {
-		return filter.map( attrName => {
+	if ( spec.length ) {
+		return spec.map( attrName => {
+			attrName = attrName + '';
 			return records.find( r => r.name === attrName ) || { target: context, name: attrName, value: context.getAttribute( attrName ), ..._type };
 		} );
 	}

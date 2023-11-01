@@ -1,10 +1,9 @@
 # realdom
 
-<!-- BADGES/ -->
-
-<span class="badge-npmversion"><a href="https://npmjs.org/package/@webqit/realdom" title="View this project on NPM"><img src="https://img.shields.io/npm/v/@webqit/realdom.svg" alt="NPM version" /></a></span> <span class="badge-npmdownloads"><a href="https://npmjs.org/package/@webqit/realdom" title="View this project on NPM"><img src="https://img.shields.io/npm/dm/@webqit/dom.svg" alt="NPM downloads" /></a></span>
-
-<!-- /BADGES -->
+[![npm version][npm-version-src]][npm-version-href]
+[![npm downloads][npm-downloads-src]][npm-downloads-href]
+[![bundle][bundle-src]][bundle-href]
+[![License][license-src]][license-href]
 
 A small, low-level utility for working with the (real) DOM in realtime!
 
@@ -1062,3 +1061,12 @@ To report bugs or request features, please submit an [issue](https://github.com/
 ## License
 
 MIT.
+
+[npm-version-src]: https://img.shields.io/npm/v/@webqit/realdom?style=flat&colorA=18181B&colorB=F0DB4F
+[npm-version-href]: https://npmjs.com/package/@webqit/realdom
+[npm-downloads-src]: https://img.shields.io/npm/dm/@webqit/realdom?style=flat&colorA=18181B&colorB=F0DB4F
+[npm-downloads-href]: https://npmjs.com/package/@webqit/realdom
+[bundle-src]: https://img.shields.io/bundlephobia/minzip/@webqit/realdom?style=flat&colorA=18181B&colorB=F0DB4F
+[bundle-href]: https://bundlephobia.com/result?p=@webqit/realdom
+[license-src]: https://img.shields.io/github/license/webqit/realdom.svg?style=flat&colorA=18181B&colorB=F0DB4F
+[license-href]: https://github.com/webqit/realdom/blob/master/LICENSE

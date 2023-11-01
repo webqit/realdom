@@ -4,6 +4,7 @@
  */
 import { _isFunction, _isObject, _internals } from '@webqit/util/js/index.js';
 import { _from as _arrFrom } from '@webqit/util/arr/index.js';
+import DOMSpec from './DOMSpec.js';
 
 /**
  *
@@ -34,14 +35,15 @@ export default class Realtime {
 	 */
 	resolveArgs( args ) {
 		if ( _isFunction( args[ 0 ] ) ) { args = [ [], ...args ]; }
-		else if ( _isObject( args[ 0 ] ) && args.length === 1 ) {
+		else if ( _isObject( args[ 0 ] ) && !( args[ 0 ] instanceof DOMSpec ) && args.length === 1 ) {
 			args = [ [], undefined, args[ 0 ] ];
 		} else if ( _isObject( args[ 1 ] ) && args.length === 2 ) {
 			args = [ _arrFrom( args[ 0 ], false/*castObject*/ ), undefined, args[ 1 ] ];
 		} else { args[ 0 ] = _arrFrom( args[ 0 ], false/*castObject*/ ); }
-		if ( args[ 0 ].filter( x => typeof x !== 'string' && !( x instanceof this.window.Node ) ).length ) {
+		if ( args[ 0 ].filter( x => typeof x !== 'string' && !( x instanceof DOMSpec ) && !( x instanceof this.window.Node ) ).length ) {
 			throw new Error( `Argument #2 must be either a string or a Node object, or a list of those.` );
 		}
+		args[ 0 ] = args[ 0 ].map( s => s instanceof DOMSpec ? s : new DOMSpec( s ) );
 		return args;
 	}
 
@@ -100,14 +102,14 @@ export default class Realtime {
 				if ( !Array.isArray( record_s ) ) { matches = matches[ 0 ]; }
 				for ( const registration of registry ) {
 					dispatchBatch.add( [ registration, matches, context ] );
-					//callback.call( this, registration, matches, context );
+					//callback.call( window, registration, matches, context );
 				}
 			}
 		}
 		// Saving everything to dispatchBatch ensures that recursive modifications
 		// to both this.registry( interceptionTiming ), registries, and registry aren't pciked up
 		for ( const [ registration, record_s, context ] of dispatchBatch ) {
-			callback.call( this, registration, record_s, context );
+			callback.call( window, registration, record_s, context );
 		}
 	}
 

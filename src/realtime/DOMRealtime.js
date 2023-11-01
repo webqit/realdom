@@ -6,7 +6,7 @@ import { _isObject } from '@webqit/util/js/index.js';
 import { _from as _arrFrom } from '@webqit/util/arr/index.js';
 import AttrRealtime from './AttrRealtime.js';
 import Realtime from './Realtime.js';
-import * as xpath from './Xpath.js';
+import * as Xpath from './Xpath.js';
 
 /**
  *
@@ -32,14 +32,14 @@ export default class DOMRealtime extends Realtime {
 	/**
 	 * Runs a query.
 	 *
-	 * @param array|Element|string		selectors
+	 * @param array|Element|string		spec
 	 * @param function					callback
 	 * @param object					params
 	 *
 	 * @return Disconnectable|Void
 	 */
-	query( selectors, callback = undefined, params = {} ) {
-		[ selectors, callback = undefined, params = {} ] = this.resolveArgs( arguments );
+	query( spec, callback = undefined, params = {} ) {
+		[ spec, callback = undefined, params = {} ] = this.resolveArgs( arguments );
 		const { context } = this;
 		// ------------------
 		const records = new Map, getRecord = target => {
@@ -48,20 +48,20 @@ export default class DOMRealtime extends Realtime {
 		};
 		// ------------------
 		if ( !params.generation || params.generation === 'entrants' ) {
-			if ( !selectors.length ) {
+			if ( !spec.length ) {
 				//if ( params.subtree ) throw new Error( `The subtree option requires a selector to work.` );
 				[ ...context.children ].forEach( node => getRecord( context ).entrants.push( node ) );
-			} else if ( selectors.every( selector => typeof selector === 'string' ) ) {
-				const [ cssSelectors, xpathQueries ] = selectors.reduce( ( [ c, x ], selector ) => {
-					return xpath.isXpath( selector ) ? [ c, x && `${ x }|${ selector }` || selector ] : [ c && `${ c },${ selector }` || selector, x ];
-				}, [ '', '' ] );
+			} else if ( spec.every( s => s.type === 'selector' ) ) {
+				const [ cssSelectors, xpathQueries ] = spec.reduce( ( [ css, xpath ], s ) => {
+					return s.kind === 'xpath' ? [ css, xpath.concat( s ) ] : [ css.concat( s ), xpath ];
+				}, [ [], [] ] );
 				const matches = [];
 				if ( params.subtree ) {
-					if ( cssSelectors.length ) { matches.push( ...context.querySelectorAll( cssSelectors ) ); }
-					if ( xpathQueries.length ) { matches.push( ...xpath.query( this.window, context, xpathQueries, true ) ); }
+					if ( cssSelectors.length ) { matches.push( ...context.querySelectorAll( cssSelectors.join( ',' ) ) ); }
+					if ( xpathQueries.length ) { matches.push( ...Xpath.query( this.window, context, xpathQueries ) ); }
 				} else {
 					if ( cssSelectors.length ) { matches.push( ...[ ...context.children ].filter( node => node.matches( cssSelectors ) ) ); }
-					if ( xpathQueries.length ) { matches.push( ...[ ...context.childNodes ].filter( node => xpath.match( this.window, node, xpathQueries, true  ) ) ); }
+					if ( xpathQueries.length ) { matches.push( ...Xpath.query( this.window, context, xpathQueries, false ) ); }
 				}
 				matches.forEach( node => getRecord( node.parentNode || context ).entrants.push( node ) );
 			}
@@ -78,7 +78,7 @@ export default class DOMRealtime extends Realtime {
 		// ------------------
 		if ( params.live ) {
 			if ( signalGenerator ) { params = { ...params, signalGenerator }; }
-			const disconnectable_live = this.observe( selectors, callback, params );
+			const disconnectable_live = this.observe( spec, callback, params );
 			return this.disconnectables( params.signal, disconnectable, disconnectable_live );
 		}
 		return this.disconnectables( params.signal, disconnectable, signalGenerator );
@@ -87,32 +87,32 @@ export default class DOMRealtime extends Realtime {
 	/**
 	 * Alias for query( ..., { subtree: false } )
 	 */
-	children( selectors, callback = undefined, params = {} ) {
-		[ selectors, callback = undefined, params = {} ] = this.resolveArgs( arguments );
-		return this.query( selectors, callback, { ...params, subtree: false } );
+	children( spec, callback = undefined, params = {} ) {
+		[ spec, callback = undefined, params = {} ] = this.resolveArgs( arguments );
+		return this.query( spec, callback, { ...params, subtree: false } );
 	}
 
 	/**
 	 * Alias for query( ..., { subtree: true } )
 	 */
-	subtree( selectors, callback = undefined, params = {} ) {
-		[ selectors, callback = undefined, params = {} ] = this.resolveArgs( arguments );
-		return this.query( selectors, callback, { ...params, subtree: true } );
+	subtree( spec, callback = undefined, params = {} ) {
+		[ spec, callback = undefined, params = {} ] = this.resolveArgs( arguments );
+		return this.query( spec, callback, { ...params, subtree: true } );
 	}
 
 	/**
 	 * Mutation Observer
 	 * 
-	 * @param array|Element|string		selectors
+	 * @param array|Element|string		spec
 	 * @param function					callback
 	 * @param object					params
 	 * 
 	 * @returns Disconnectable
 	 */
-	observe( selectors, callback, params = {} ) {
-		[ selectors, callback, params = {} ] = this.resolveArgs( arguments );
+	observe( spec, callback, params = {} ) {
+		[ spec, callback, params = {} ] = this.resolveArgs( arguments );
 		// ------------------------
-		if ( [ 'sync', 'intercept' ].includes( params.timing ) ) return this.observeSync( selectors, callback, params );
+		if ( [ 'sync', 'intercept' ].includes( params.timing ) ) return this.observeSync( spec, callback, params );
 		if ( params.timing && params.timing !== 'async' ) throw new Error( `Timing option "${ params.timing }" invalid.` );
 		// ------------------------
 		const { context, window, webqit, document } = this;
@@ -127,7 +127,7 @@ export default class DOMRealtime extends Realtime {
 		} ) );
 		disconnectable.observe( context, { childList: true, subtree: params.subtree, } );
 		const signalGenerator = params.signalGenerator || params.lifecycleSignals && this.createSignalGenerator();
-		const registration = { context, selectors, callback, params, signalGenerator, disconnectable };
+		const registration = { context, spec, callback, params, signalGenerator, disconnectable };
 		// -------------
 		if ( params.staticSensitivity ) {
 			const disconnectable_attr = staticSensitivity.call( window, registration );
@@ -139,14 +139,14 @@ export default class DOMRealtime extends Realtime {
 	/**
 	 * Mutation Interceptor
 	 * 
-	 * @param array|Element|string		selectors
+	 * @param array|Element|string		spec
 	 * @param function					callback
 	 * @param object					params
 	 * 
 	 * @returns Disconnectable
 	 */
-	observeSync( selectors, callback, params = {} ) {
-		[ selectors, callback, params = {} ] = this.resolveArgs( arguments );
+	observeSync( spec, callback, params = {} ) {
+		[ spec, callback, params = {} ] = this.resolveArgs( arguments );
 		const { context, window } = this;		
 		// -------------
 		if ( params.timing && ![ 'sync', 'intercept' ].includes( params.timing ) ) throw new Error( `Timing option "${ params.timing }" invalid.` );
@@ -170,7 +170,7 @@ export default class DOMRealtime extends Realtime {
 			if ( !registry.size ) { registries.delete( context ); }
 		} };
 		const signalGenerator = params.signalGenerator || params.lifecycleSignals && this.createSignalGenerator();
-		const registration = { context, selectors, callback, params, signalGenerator, disconnectable };
+		const registration = { context, spec, callback, params, signalGenerator, disconnectable };
 		// -------------
 		const registries = this.registry( interceptionTiming, intersectionDepth );
 		if ( !registries.has( context ) ) { registries.set( context, new Set ); }
@@ -186,7 +186,7 @@ export default class DOMRealtime extends Realtime {
 }
 
 /**
- * Sensitivty for attribute changes for attribute selectors.
+ * Sensitivty for attribute changes for attribute spec.
  * 
  * @param object registration
  * 
@@ -194,12 +194,12 @@ export default class DOMRealtime extends Realtime {
  */
 function staticSensitivity( registration ) {
 	const window = this;
-	const { context, selectors, callback, params, signalGenerator } = registration;
-	const cssSelectors = selectors.filter( s => typeof s === 'string' && !xpath.isXpath( s ) );
+	const { context, spec, callback, params, signalGenerator } = registration;
+	const cssSelectors = spec.filter( s => s.kind === 'css' );
 	const parseDot = selector => selector.match( /\.([\w-]+)/g )?.length ? [ 'class' ] : [];
 	const parseHash = selector => selector.match( /#([\w-]+)/g )?.length ? [ 'id' ] : [];
 	const parse = selector => [ ...selector.matchAll( /\[([^\=\]]+)(\=[^\]]+)?\]/g ) ].map( x => x[ 1 ] ).concat( parseDot( selector ) ).concat( parseHash( selector ) );
-	if ( !( registration.$attrs = Array.from( new Set( cssSelectors.filter( s => s.includes( '[' ) ).reduce( ( attrs, selector ) => attrs.concat( parse( selector ) ), [] ) ) ) ).length ) return;
+	if ( !( registration.$attrs = Array.from( new Set( cssSelectors.filter( s => ( s + '' ).includes( '[' ) ).reduce( ( attrs, selector ) => attrs.concat( parse( selector + '' ) ), [] ) ) ) ).length ) return;
 	// ---------
 	const entrants = new Set, exits = new Set;
 	entrants.push = val => ( exits.delete( val ), entrants.add( val ) );
@@ -214,7 +214,7 @@ function staticSensitivity( registration ) {
 		// ---------
 		const matchesCache = new WeakMap;
 		const matches = node => {
-			if ( !matchesCache.has( node ) ) { matchesCache.set( node, cssSelectors.some( selector => node.matches( selector ) ) ); }
+			if ( !matchesCache.has( node ) ) { matchesCache.set( node, cssSelectors.some( s => node.matches( s + '' ) ) ); }
 			return matchesCache.get( node );
 		};
 		// ---------
@@ -244,14 +244,14 @@ function staticSensitivity( registration ) {
  * @returns Void
  */
 function dispatch( registration, _record ) {
-	const { context, selectors, callback, params, signalGenerator, $deliveryCache } = registration;
+	const { context, spec, callback, params, signalGenerator, $deliveryCache } = registration;
 	// ---------
 	const record = { ..._record, entrants: [], exits: [] };
 	if ( !params.eventDetails ) { delete record.event; }
 	[ 'entrants', 'exits' ].forEach( generation => {
 		if ( params.generation && generation !== params.generation ) return;
-		if ( selectors.length ) {
-			record[ generation ] = nodesIntersection.call( this, selectors, _record[ generation ], _record.event !== 'parse' );
+		if ( spec.length ) {
+			record[ generation ] = nodesIntersection.call( this, spec, _record[ generation ], _record.event !== 'parse' );
 		} else {
 			record[ generation ] = [ ..._record[ generation ] ];
 		}
@@ -269,45 +269,45 @@ function dispatch( registration, _record ) {
 /**
  * Aggregates instances of els in sources
  * 
- * @param Array 			targets 
+ * @param Array 			spec 
  * @param Array 			sources 
  * @param Bool 				deepIntersect 
  * 
  * @returns 
  */
-function nodesIntersection( targets, sources, deepIntersect ) {
+function nodesIntersection( spec, sources, deepIntersect ) {
 	sources = Array.isArray( sources ) ? sources : [ ...sources ];
-	const match = ( sources, target ) => {
+	const match = ( sources, s ) => {
 		// Filter out text nodes
-		if ( typeof target === 'string' ) {
+		if ( s.type === 'selector' ) {
 			// Is directly mutated...
-			let matches = sources.filter( source => xpath.isXpath( target ) ? xpath.match( this, source, target ) : source.matches && source.matches( target ) );
+			let matches = s.isXpathAttr ? [] : sources.filter( source => s.kind === 'xpath' ? Xpath.match( this, source, s + '' ) : source.matches && source.matches( s + '' ) );
 			// Is contextly mutated...
-			if ( deepIntersect ) {
+			if ( deepIntersect || s.isXpathAttr ) {
 				matches = sources.reduce( ( collection, source ) => {
-					if ( xpath.isXpath( target ) ) { return [ ...collection, ...xpath.query( this, source, target ) ]; }
-					return source.querySelectorAll ? [ ...collection, ...source.querySelectorAll( target ) ] : collection;
+					if ( s.kind === 'xpath' ) { return [ ...collection, ...Xpath.query( this, source, s, deepIntersect ) ]; }
+					return source.querySelectorAll ? [ ...collection, ...source.querySelectorAll( s + '' ) ] : collection;
 				}, matches );
 			}
 			if ( matches.length ) return matches;
 		} else {
 			// Is directly mutated...
-			if ( sources.includes( target ) || (
-				deepIntersect && sources.some( source => source.contains( target ) )
-			) ) { return [ target ]; }
+			if ( sources.includes( s.content ) || (
+				deepIntersect && sources.some( source => source.contains( s.content ) )
+			) ) { return [ s.content ]; }
 		}
 	};
 	// Search can be expensive...
 	// Multiple listeners searching the same thing in the same list?
 	if ( !sources.$$searchCache ) { sources.$$searchCache = new Map; }
-	return targets.reduce( ( matches, target ) => {
+	return spec.reduce( ( matches, s ) => {
 		let _matches;
-		if ( sources.$$searchCache.has( target ) ) {
-			_matches = sources.$$searchCache.get( target );
+		if ( sources.$$searchCache.has( s.content ) ) {
+			_matches = sources.$$searchCache.get( s.content );
 		} else {
-			_matches = match( sources, target ) || [];
-			if ( _isObject( target ) ) {
-				sources.$$searchCache.set( target, _matches );
+			_matches = match( sources, s ) || [];
+			if ( s.type === 'instance' ) {
+				sources.$$searchCache.set( s.content, _matches );
 			}
 		}
 		return matches.concat( _matches );
