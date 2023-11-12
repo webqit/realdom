@@ -15,12 +15,17 @@ export function match( window, node, expr ) {
     return window.document.evaluate( `${ expr }`, node, null, XPathResult.BOOLEAN_TYPE ).booleanValue;
 }
 
-export function split( s, delim = '|' ) {
-    return [ ...s ].reduce( ( [ state, splits ], x ) => {
-        if ( x === delim && state === 0 ) return [ state, [ '' ].concat( splits ) ];
-        if ( [ '(', '[' ].includes( x ) && !splits[ 0 ].endsWith( '\\' ) ) state++;
-        if ( [ ')', ']' ].includes( x ) && !splits[ 0 ].endsWith( '\\' ) ) state--;
+export function splitOuter( str, delim = '|' ) {
+    return [ ...str ].reduce( ( [ quote, depth, splits, skip ], x ) => {
+        if ( !quote && depth === 0 && ( Array.isArray( delim ) ? delim : [ delim ] ).includes( x ) ) {
+            return [ quote, depth, [ '' ].concat( splits ) ];
+        }
+        if ( !quote && [ '(', '[', '{' ].includes( x ) && !splits[ 0 ].endsWith( '\\' ) ) depth++;
+        if ( !quote && [ ')', ']', '}' ].includes( x ) && !splits[ 0 ].endsWith( '\\' ) ) depth--;
+        if ( [ '"', "'", '`' ].includes( x ) && !splits[ 0 ].endsWith( '\\' ) ) {
+            quote = quote === x ? null : ( quote || x );
+        }
         splits[ 0 ] += x;
-        return [ state, splits ]
-    }, [ 0, [ '' ] ] )[ 1 ].reverse();
+        return [ quote, depth, splits ]
+    }, [ null, 0, [ '' ] ] )[ 2 ].reverse();
 }
