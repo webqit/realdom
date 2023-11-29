@@ -72,7 +72,7 @@ export default class Scheduler {
 			} );
 		}
 		if ( this.synthesis ) {
-			queueMicrotask( callback );
+			Promise.resolve().then( callback );
 		} else {
 			this.readCallbacks.add( callback );
 		}
@@ -99,7 +99,7 @@ export default class Scheduler {
 			} );
 		}
 		if ( this.synthesis ) {
-			queueMicrotask( callback );
+			Promise.resolve().then( callback );
 		} else {
 			this.writeCallbacks.add( callback );
 		}
