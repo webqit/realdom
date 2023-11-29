@@ -28,6 +28,9 @@ export default function() {
     window.webqit.realdom.schedule = ( type, ...args ) => {
         return scheduler[ `on${ type }` ]( ...args );
     };
+    window.webqit.realdom.synthesizeWhile = ( ...args ) => {
+        return scheduler.synthesizeWhile( ...args );
+    };
     // ------
     return window.webqit.realdom;
 }

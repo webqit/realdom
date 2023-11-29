@@ -13,29 +13,41 @@ export default class Scheduler {
 	 *
 	 * @return this
 	 */
-	constructor( window, asyncDOM = true ) {
+	constructor( window, synthesis = false ) {
 		Object.defineProperty( this, 'window', { value: window } );
 		Object.defineProperty( this, 'readCallbacks', { value: new Set } );
 		Object.defineProperty( this, 'writeCallbacks', { value: new Set } );
-		this.async = asyncDOM;
-		if ( this.window.requestAnimationFrame ) {
-			this._run();
-		} else {
-			this.async = false;
+		Object.defineProperty( this, '_synthesis', { value: 0, writable: true } );
+		if ( !synthesis && this.window.requestAnimationFrame ) {
+			this._loop();
+		} else { this._synthesis ++; }
+	}
+
+	get synthesis() { return this._synthesis; }
+
+	async synthesizeWhile( callback ) {
+		this._synthesis ++;
+		this._fulfill();
+		const returnValue = await callback();
+		this._synthesis --;
+		return returnValue;
+	}
+
+	_fulfill() {
+		for ( const callback of this.readCallbacks ) {
+			callback();
+			this.readCallbacks.delete( callback );
+		}
+		for ( const callback of this.writeCallbacks ) {
+			callback();
+			this.writeCallbacks.delete( callback );
 		}
 	}
 
-	_run() {
+	_loop() {
 		this.window.requestAnimationFrame( () => {
-			for ( const callback of this.readCallbacks ) {
-				callback();
-				this.readCallbacks.delete( callback );
-			}
-			for ( const callback of this.writeCallbacks ) {
-				callback();
-				this.writeCallbacks.delete( callback );
-			}
-			this._run();
+			this._fulfill();
+			this._loop();
 		} );
 	}
 	
@@ -50,7 +62,7 @@ export default class Scheduler {
 	onread( callback, withPromise = false ) {
 		if ( withPromise ) {
 			return new Promise( resolve => {
-				if ( this.async === false ) {
+				if ( this.synthesis ) {
 					resolve( callback() );
 				} else {
 					this.readCallbacks.add( () => {
@@ -59,8 +71,8 @@ export default class Scheduler {
 				}
 			} );
 		}
-		if ( this.async === false ) {
-			callback();
+		if ( this.synthesis ) {
+			queueMicrotask( callback );
 		} else {
 			this.readCallbacks.add( callback );
 		}
@@ -77,7 +89,7 @@ export default class Scheduler {
 	onwrite( callback, withPromise = false ) {
 		if ( withPromise ) {
 			return new Promise( resolve => {
-				if ( this.async === false ) {
+				if ( this.synthesis ) {
 					resolve( callback() );
 				} else {
 					this.writeCallbacks.add( () => {
@@ -86,8 +98,8 @@ export default class Scheduler {
 				}
 			} );
 		}
-		if ( this.async === false ) {
-			callback();
+		if ( this.synthesis ) {
+			queueMicrotask( callback );
 		} else {
 			this.writeCallbacks.add( callback );
 		}
