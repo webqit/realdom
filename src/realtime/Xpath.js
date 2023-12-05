@@ -4,15 +4,21 @@ export function isXpath( expr ) { return ( expr = expr.trim() ) && expr.startsWi
 
 export function query( window, context, expr, subtree = true ) {
     expr = ( Array.isArray( expr ) ? expr : [ expr ] ).map( x => ( x + '' ).replace( '(', subtree ? '(.//' : '(./' ) ).join( '|' );
-    const result = window.document.evaluate( expr, context, null, XPathResult.ANY_TYPE );
     let nodes = [], node;
-    while ( node = result.iterateNext() ) nodes.push( node );
+    try {
+        // Throws in firefox and safari where context is a text node
+        const result = window.document.evaluate( expr, context, null, XPathResult.ANY_TYPE );
+        while ( node = result.iterateNext() ) nodes.push( node );
+    } catch( e ) {}
     return nodes;
 }
 
 export function match( window, node, expr ) {
     expr = ( Array.isArray( expr ) ? expr : [ expr ] ).map( x => ( x + '' ).replace( '(', '(self::' ) ).join( '|' );
-    return window.document.evaluate( `${ expr }`, node, null, XPathResult.BOOLEAN_TYPE ).booleanValue;
+    try {
+        // Throws in firefox and safari where context is a text node and query isn't
+        return window.document.evaluate( `${ expr }`, node, null, XPathResult.BOOLEAN_TYPE ).booleanValue;
+    } catch( e ) {}
 }
 
 export function splitOuter( str, delim = '|' ) {
