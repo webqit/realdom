@@ -169,7 +169,7 @@ realtime( document.body ).observe( handleChanges, { subtree: true } );
 
 ### Concept: *Targets*
 
-Report all "p" elements that have been added or removed to/from the given context:
+Pass in a CSS selector to match elements in realtime; e.g. "p" for all `<p>` elements:
 
 ```js
 // Observing only "p" elements mutations
@@ -192,6 +192,15 @@ const div = document.createElement( 'div' );
 div.appendChild( p );
 document.body.appendChild( div );
 ```
+
+**-->** Pass in an Xpath query to express what can't be expressed in a CSS selector; e.g. for when you need to match text and comment nodes in realtime. Xpath expressions must be enclosed in parentheses.
+
+```js
+// Observing all "comment" nodes having a certain content
+realtime( document.body ).observe( '(comment()[contains(., "hello world")])', handleChanges, { subtree: true } );
+```
+
+> **Info** Note that Xpath expressions must not be prefixed with the direct children `/` or descendant `//` qualifiers as that is controlled internally. The `options.subtree` parameter is how you specify the resolution context for your queries.
 
 **-->** Observe element instances as targets too. (E.g. a "p" instance.)
 
@@ -544,7 +553,7 @@ records.forEach( record => handleResult( record ) );
 
 ### Concept: *Targets*
 
-Get all "p" elements that are direct children of the given context delivered:
+Pass in a CSS selector to match elements: e.g. "p" for all `<p>` elements:
 
 ```js
 // Matching just "p" children
@@ -583,6 +592,15 @@ const records = realtime( document.body ).subtree( 'p' );
 // Deligating to handler
 records.forEach( record => handleResult( record ) );
 ```
+
+**-->** Pass in an Xpath query to express what can't be expressed in a CSS selector; e.g. for when you need to match text and comment nodes. Xpath expressions must be enclosed in parentheses.
+
+```js
+// Query all "comment" nodes having a certain content
+realtime( document.body ).query( '(comment()[contains(., "hello world")])', handleResult, { subtree: true } );
+```
+
+> **Info**: Note that Xpath expressions must not be prefixed with the direct children `/` or descendant `//` qualifiers as that is controlled internally. The `options.subtree` parameter is how you specify the resolution context for your queries.
 
 ### Concept: *Records*
 
