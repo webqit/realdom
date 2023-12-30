@@ -2,6 +2,7 @@
 /**
  * @imports
  */
+import { _internals } from '@webqit/util/js/index.js';
 import Realtime from './Realtime.js';
 import DOMSpec from './DOMSpec.js';
 
@@ -75,7 +76,7 @@ export default class AttrRealtime extends Realtime {
 		}
 		// -------------
 		const disconnectable = new window.MutationObserver( records => {
-			records = dedup( records ).map( rcd => withAttrEventDetails.call( window, rcd ) );
+			records = dedupAndIgnoreInternals( records ).map( rcd => withAttrEventDetails.call( window, rcd ) );
 			dispatch.call( window, registration, records, context );
 		} );
 		// ------------------
@@ -136,9 +137,10 @@ export default class AttrRealtime extends Realtime {
  * 
  * @returns Array
  */
-function dedup( records ) {
+function dedupAndIgnoreInternals( records ) {
 	return records.reduce( ( rcds, rcd, i ) => {
 		if ( rcds[ i - 1 ]?.attributeName === rcd.attributeName ) return rcds;
+		if ( _internals( rcd.target, 'internalAttrInteractions' ).get( rcd.attributeName ) ) return rcds;
 		return rcds.concat( rcd );
 	}, [] );
 }
@@ -173,7 +175,7 @@ function dispatch( registration, records ) {
 			if ( !params.newValue && ( 'value' in rcd ) ) {
 				( { value: exclusion, ...rcd } = rcd );
 			} else if ( params.newValue && typeof rcd.value === 'undefined' ) {
-				rcd = {  ...rcd, value: rcd.target.getAttribute( rcd.name ) };
+				rcd = {  ...rcd, value: internalAttrInteraction( rcd.target, rcd.name, () => rcd.target.getAttribute( rcd.name ) ) };
 			}
 			return rcd;
 		} );
@@ -185,6 +187,16 @@ function dispatch( registration, records ) {
 	const record_s = originalFilterIsString ? records[ 0 ] : records;
 	const flags = signalGenerator?.generate() || {};
 	callback( record_s, flags, context );
+}
+
+/**
+ */
+function internalAttrInteraction( node, attrName, callback ) {
+	const savedAttrLocking = _internals( node, 'internalAttrInteractions' ).get( attrName );
+	_internals( node, 'internalAttrInteractions' ).set( attrName, true );
+	const value = callback();
+	_internals( node, 'internalAttrInteractions' ).set( attrName, savedAttrLocking );
+	return value;
 }
 
 /**
@@ -201,12 +213,12 @@ function attrIntersection( context, spec, records = [] ) {
 	if ( spec.length ) {
 		return spec.map( attrName => {
 			attrName = attrName + '';
-			return records.find( r => r.name === attrName ) || { target: context, name: attrName, value: context.getAttribute( attrName ), ..._type };
+			return records.find( r => r.name === attrName ) || { target: context, name: attrName, value: internalAttrInteraction( context, attrName, () => context.getAttribute( attrName ) ), ..._type };
 		} );
 	}
 	const attrs = Array.from( context.attributes );
 	return attrs.map( attr => {
-		return records.find( r => r.name === attr.nodeName ) || { target: context, name: attr.nodeName, value: attr.nodeValue, ..._type };
+		return records.find( r => r.name === attr.nodeName ) || { target: context, name: attr.nodeName, value: internalAttrInteraction( context, attr.nodeName, () => attr.nodeValue ), ..._type };
 	} );
 }
 
@@ -251,6 +263,7 @@ function attrInterception( timing, callback ) {
 		// ------------------
 		registry[ record.name ] = registry[ record.name ] || [];
 		registry[ record.name ].unshift( record.event );
+		if ( _internals( record.target, 'internalAttrInteractions' ).get( record.name ) ) return defaultAction();
 		// ------------------
 		webqit.realdom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( [ record ] ) );
 		const returnValue = defaultAction();
@@ -264,7 +277,7 @@ function attrInterception( timing, callback ) {
 			const registry = window.webqit.realdom.attrInterceptionRecords?.get( rcd.target ) || {};
 			return !registry[ rcd.attributeName ]?.shift();
 		} );
-		records = dedup( records ).map( rcd => withAttrEventDetails.call( window, rcd ) );
+		records = dedupAndIgnoreInternals( records ).map( rcd => withAttrEventDetails.call( window, rcd ) );
 		if ( !records.length ) return;
 		webqit.realdom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( records ) );
 		webqit.realdom.attrInterceptionHooks.get( 'sync' )?.forEach( callback => callback( records ) );
@@ -276,7 +289,7 @@ function attrInterception( timing, callback ) {
 	[ 'setAttribute', 'removeAttribute', 'toggleAttribute', ].forEach( apiName => {
 		originalApis[ apiName ] = Element.prototype[ apiName ];
 		Element.prototype[ apiName ] = function( ...args ) {
-			let value, oldValue = this.getAttribute( args[ 0 ] );
+			let value, oldValue = internalAttrInteraction( this, args[ 0 ], () => this.getAttribute( args[ 0 ] ) );
 			if ( [ 'setAttribute', 'toggleAttribute' ].includes( apiName ) ) { value = args[ 1 ]; }
 			if ( apiName === 'toggleAttribute' && value === undefined ) {
 				value = oldValue === null ? true : false;

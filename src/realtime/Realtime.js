@@ -5,6 +5,7 @@
 import { _isFunction, _isObject, _internals } from '@webqit/util/js/index.js';
 import { _from as _arrFrom } from '@webqit/util/arr/index.js';
 import DOMSpec from './DOMSpec.js';
+import * as Util from './Util.js';
 
 /**
  *
@@ -94,8 +95,8 @@ export default class Realtime {
 			for ( const [ context, registry ] of registries ) {
 				// Ensure event target is/within context
 				let matches = records.filter( record => {
-					if ( !context.contains( record.target ) ) return false;
-					return depth === 'subtree' || record.target === context;
+					if ( !Util.containsNode( window, context, record.target, depth === 'cross-roots' ) ) return false;
+					return [ 'subtree', 'cross-roots' ].includes( depth ) || record.target === context;
 				} );
 				if ( !matches.length ) continue;
 				// Records will be dispatched in their original form

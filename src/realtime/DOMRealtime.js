@@ -6,7 +6,7 @@ import { _isObject } from '@webqit/util/js/index.js';
 import { _from as _arrFrom } from '@webqit/util/arr/index.js';
 import AttrRealtime from './AttrRealtime.js';
 import Realtime from './Realtime.js';
-import * as Xpath from './Xpath.js';
+import * as Util from './Util.js';
 
 /**
  *
@@ -58,10 +58,10 @@ export default class DOMRealtime extends Realtime {
 				const matches = [];
 				if ( params.subtree ) {
 					if ( cssSelectors.length ) { matches.push( ...context.querySelectorAll( cssSelectors.join( ',' ) ) ); }
-					if ( xpathQueries.length ) { matches.push( ...Xpath.query( this.window, context, xpathQueries ) ); }
+					if ( xpathQueries.length ) { matches.push( ...Util.xpathQuery( this.window, context, xpathQueries ) ); }
 				} else {
 					if ( cssSelectors.length ) { matches.push( ...[ ...context.children ].filter( node => node.matches( cssSelectors ) ) ); }
-					if ( xpathQueries.length ) { matches.push( ...Xpath.query( this.window, context, xpathQueries, false ) ); }
+					if ( xpathQueries.length ) { matches.push( ...Util.xpathQuery( this.window, context, xpathQueries, false ) ); }
 				}
 				matches.forEach( node => getRecord( node.parentNode || context ).entrants.push( node ) );
 			}
@@ -125,7 +125,7 @@ export default class DOMRealtime extends Realtime {
 		const disconnectable = new window.MutationObserver( records => records.forEach( record => {
 			dispatch.call( window, registration, withEventDetails.call( window, record ), context );
 		} ) );
-		disconnectable.observe( context, { childList: true, subtree: params.subtree, } );
+		disconnectable.observe( context, { childList: true, subtree: params.subtree && true, } );
 		const signalGenerator = params.signalGenerator || params.lifecycleSignals && this.createSignalGenerator();
 		const registration = { context, spec, callback, params, signalGenerator, disconnectable };
 		// -------------
@@ -151,7 +151,7 @@ export default class DOMRealtime extends Realtime {
 		// -------------
 		if ( params.timing && ![ 'sync', 'intercept' ].includes( params.timing ) ) throw new Error( `Timing option "${ params.timing }" invalid.` );
 		const interceptionTiming = params.timing === 'intercept' ? 'intercept' : 'sync';
-		const intersectionDepth = params.subtree ? 'subtree' : 'children';
+		const intersectionDepth = params.subtree === 'cross-roots' ? 'cross-roots' : ( params.subtree ? 'subtree' : 'children' );
 		if ( !this.registry( interceptionTiming ).size ) {
 			// One handler per intercept/sync registry
 			domInterception.call( window, interceptionTiming, record => {
@@ -162,7 +162,7 @@ export default class DOMRealtime extends Realtime {
 			if ( Array.isArray( ( record = withEventDetails.call( window, record ) ).event ) ) return;
 			dispatch.call( window, registration, record, context );
 		} ) );
-		mo.observe( context, { childList: true, subtree: params.subtree } );
+		mo.observe( context, { childList: true, subtree: params.subtree && true } );
 		// -------------
 		const disconnectable = { disconnect() {
 			mo.disconnect();
@@ -182,6 +182,22 @@ export default class DOMRealtime extends Realtime {
 			return this.disconnectables( params.signal, disconnectable, signalGenerator, disconnectable_attr );
 		}
 		return this.disconnectables( params.signal, disconnectable, signalGenerator );
+	}
+
+	/**
+	 * Tracks the connectedness of element references.
+	 *
+	 * @param array|Element				elements
+	 * @param function					callback
+	 * @param object					params
+	 *
+	 * @return Disconnectable
+	 */
+	track( elements, callback, params = {} ) {
+		return this.observe( elements, record => {
+			if ( record.entrants.length ) callback( true, Array.isArray( elements ) ? record.entrants : record.entrants[ 0 ] );
+			if ( record.exits.length ) callback( false, Array.isArray( elements ) ? record.exits : record.exits[ 0 ] );
+		}, params );
 	}
 }
 
@@ -251,7 +267,7 @@ function dispatch( registration, _record ) {
 	[ 'entrants', 'exits' ].forEach( generation => {
 		if ( params.generation && generation !== params.generation ) return;
 		if ( spec.length ) {
-			record[ generation ] = nodesIntersection.call( this, spec, _record[ generation ], _record.event !== 'parse' );
+			record[ generation ] = nodesIntersection.call( this, spec, params.subtree === 'cross-roots', _record[ generation ], _record.event !== 'parse' );
 		} else {
 			record[ generation ] = [ ..._record[ generation ] ];
 		}
@@ -270,22 +286,23 @@ function dispatch( registration, _record ) {
  * Aggregates instances of els in sources
  * 
  * @param Array 			spec 
+ * @param Bool 				crossRoots 
  * @param Array 			sources 
  * @param Bool 				deepIntersect 
  * 
  * @returns 
  */
-function nodesIntersection( spec, sources, deepIntersect ) {
+function nodesIntersection( spec, crossRoots, sources, deepIntersect ) {
 	sources = Array.isArray( sources ) ? sources : [ ...sources ];
 	const match = ( sources, s ) => {
 		// Filter out text nodes
 		if ( s.type === 'selector' ) {
 			// Is directly mutated...
-			let matches = s.isXpathAttr ? [] : sources.filter( source => s.kind === 'xpath' ? Xpath.match( this, source, s + '' ) : source.matches && source.matches( s + '' ) );
+			let matches = s.isXpathAttr ? [] : sources.filter( source => s.kind === 'xpath' ? Util.xpathMatch( this, source, s + '' ) : source.matches && source.matches( s + '' ) );
 			// Is contextly mutated...
 			if ( deepIntersect || s.isXpathAttr ) {
 				matches = sources.reduce( ( collection, source ) => {
-					if ( s.kind === 'xpath' ) { return [ ...collection, ...Xpath.query( this, source, s, deepIntersect ) ]; }
+					if ( s.kind === 'xpath' ) { return [ ...collection, ...Util.xpathQuery( this, source, s, deepIntersect ) ]; }
 					return source.querySelectorAll ? [ ...collection, ...source.querySelectorAll( s + '' ) ] : collection;
 				}, matches );
 			}
@@ -293,7 +310,7 @@ function nodesIntersection( spec, sources, deepIntersect ) {
 		} else {
 			// Is directly mutated...
 			if ( sources.includes( s.content ) || (
-				deepIntersect && sources.some( source => source.contains( s.content ) )
+				deepIntersect && sources.some( source => Util.containsNode( this/* window */, source, s.content, crossRoots ) )
 			) ) { return [ s.content ]; }
 		}
 	};
@@ -341,6 +358,7 @@ function domInterception( timing, callback ) {
 	const window = this;
 	const { webqit, document, Node, CharacterData, Element, HTMLElement, HTMLTemplateElement, DocumentFragment } = window;
 	if ( !webqit.realdom.domInterceptionHooks ) { Object.defineProperty( webqit.realdom, 'domInterceptionHooks', { value: new Map } ); }
+	if ( !webqit.realdom.domInterceptionNoRecurse ) { Object.defineProperty( webqit.realdom, 'domInterceptionNoRecurse', { value: new Map } ); }
 	if ( !webqit.realdom.domInterceptionHooks.has( timing ) ) { webqit.realdom.domInterceptionHooks.set( timing, new Set ); }
 	webqit.realdom.domInterceptionHooks.get( timing ).add( callback );
 	const rm = () => webqit.realdom.domInterceptionHooks.get( timing ).delete( callback );
@@ -348,6 +366,14 @@ function domInterception( timing, callback ) {
 	console.warn( `DOM mutation APIs are now being intercepted.` );
 	webqit.realdom.domInterceptionHooks.intercepting = true;
 	Object.defineProperty( webqit.realdom, 'domInterceptionRecords', { value: new Map } );
+
+	// No recursion helper
+	const noRecurse = ( node, method, callback ) => {
+		webqit.realdom.domInterceptionNoRecurse.set( node, method );
+		const returnValue = callback();
+		webqit.realdom.domInterceptionNoRecurse.delete( node );
+		return returnValue;
+	};
 
 	// Interception hooks
 	const intercept = ( record, defaultAction ) => {
@@ -374,6 +400,7 @@ function domInterception( timing, callback ) {
 			// Instance of Node interface? Abort!
 			const exec = () => originalApis[ apiName ].call( this, ...args );
 			if ( !( this instanceof CharacterData || this instanceof Element || this instanceof DocumentFragment ) ) return exec();
+			if ( webqit.realdom.domInterceptionNoRecurse.get( this ) === apiName ) return exec();
 			// --------------
 			// Obtain exits and entrants
 			let exits = [], entrants = [], target = this;
@@ -420,8 +447,7 @@ function domInterception( timing, callback ) {
 				if ( apiName === 'insertAdjacentHTML' ) {
 					apiNameFinal = 'insertAdjacentElement';
 					args[ 1 ] = new DocumentFragment;
-					args[ 1 ].______isTemp = true;
-					args[ 1 ].append( ...temp.childNodes );
+					noRecurse( args[ 1 ], 'append', () => args[ 1 ].append( ...temp.childNodes ) );
 				} else {
 					apiNameFinal = 'replaceChildren';
 					args = [ ...temp.childNodes ];
@@ -492,14 +518,13 @@ function domInterception( timing, callback ) {
 				// -------------- 
 				if ( apiName === 'outerHTML' ) {
 					value = new DocumentFragment;
-					value.______isTemp = true;
-					value.append( ...temp.childNodes );
-					exec = () => Element.prototype.replaceWith.call( this, value );
+					noRecurse( value, 'append', () => value.append( ...temp.childNodes ) );
+					exec = () => noRecurse( this, 'replaceWith', () => Element.prototype.replaceWith.call( this, value ) );
 				} else {
 					if ( this instanceof HTMLTemplateElement ) {
-						exec = () => this.content.replaceChildren( ...temp.childNodes );
+						exec = () => noRecurse( this.conten, 'replaceChildren', () => this.content.replaceChildren( ...temp.childNodes ) );
 					} else {
-						exec = () => Element.prototype.replaceChildren.call( this, ...temp.childNodes );
+						exec = () => noRecurse( this, 'replaceChildren', () => Element.prototype.replaceChildren.call( this, ...temp.childNodes ) );
 					}
 				}
 			}
@@ -514,7 +539,7 @@ function domInterception( timing, callback ) {
 		[ document, DocumentFragment.prototype ].forEach( target => {
 			const originalApi = target[ apiName ];
 			target[ apiName ] = function( ...args ) {
-				if ( this.______isTemp ) return originalApi.call( this, ...args );
+				if ( webqit.realdom.domInterceptionNoRecurse.get( this ) === apiName ) return originalApi.call( this, ...args );
 				const exits = apiName === 'replaceChildren' ? [ ...this.childNodes ] : [];
 				const record = {
 					target: this,

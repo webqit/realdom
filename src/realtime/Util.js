@@ -2,23 +2,31 @@
 
 export function isXpath( expr ) { return ( expr = expr.trim() ) && expr.startsWith( '(' ) && expr.endsWith( ')' ) }
 
-export function query( window, context, expr, subtree = true ) {
+export function xpathQuery( window, context, expr, subtree = true ) {
     expr = ( Array.isArray( expr ) ? expr : [ expr ] ).map( x => ( x + '' ).replace( '(', subtree ? '(.//' : '(./' ) ).join( '|' );
     let nodes = [], node;
     try {
         // Throws in firefox and safari where context is a text node
-        const result = window.document.evaluate( expr, context, null, XPathResult.ANY_TYPE );
+        const result = window.document.evaluate( expr, context, null, window.XPathResult.ANY_TYPE );
         while ( node = result.iterateNext() ) nodes.push( node );
     } catch( e ) {}
     return nodes;
 }
 
-export function match( window, node, expr ) {
+export function xpathMatch( window, node, expr ) {
     expr = ( Array.isArray( expr ) ? expr : [ expr ] ).map( x => ( x + '' ).replace( '(', '(self::' ) ).join( '|' );
     try {
         // Throws in firefox and safari where context is a text node and query isn't
-        return window.document.evaluate( `${ expr }`, node, null, XPathResult.BOOLEAN_TYPE ).booleanValue;
+        return window.document.evaluate( `${ expr }`, node, null, window.XPathResult.BOOLEAN_TYPE ).booleanValue;
     } catch( e ) {}
+}
+
+export function containsNode( window, a, b, crossRoots = false ) {
+    const rootNodeA = a.getRootNode();
+    const rootNodeB = b.getRootNode();
+    if ( rootNodeA === rootNodeB ) return a.contains( b );
+    if ( crossRoots && rootNodeB instanceof window.ShadowRoot ) return containsNode( window, a, rootNodeB.host, crossRoots );
+    return false;
 }
 
 export function splitOuter( str, delim = '|' ) {
