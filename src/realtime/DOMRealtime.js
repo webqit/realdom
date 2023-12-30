@@ -194,6 +194,7 @@ export default class DOMRealtime extends Realtime {
 	 * @return Disconnectable
 	 */
 	track( elements, callback, params = {} ) {
+		params = { subtree: true, ...params };
 		return this.observe( elements, record => {
 			if ( record.entrants.length ) callback( true, Array.isArray( elements ) ? record.entrants : record.entrants[ 0 ] );
 			if ( record.exits.length ) callback( false, Array.isArray( elements ) ? record.exits : record.exits[ 0 ] );
