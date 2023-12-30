@@ -80,7 +80,7 @@ export default class AttrRealtime extends Realtime {
 			dispatch.call( window, registration, records, context );
 		} );
 		// ------------------
-		const $params = { attributes: true, attributeOldValue: params.oldValue, subtree: params.subtree };
+		const $params = { attributes: true, attributeOldValue: params.oldValue, subtree: params.subtree && true };
 		if ( spec.length ) { $params.attributeFilter = spec.map( a => a + '' ); }
 		disconnectable.observe( context, $params );
 		// -------------
@@ -106,7 +106,7 @@ export default class AttrRealtime extends Realtime {
 		// -------------
 		if ( params.timing && ![ 'sync', 'intercept' ].includes( params.timing ) ) throw new Error( `Timing option "${ params.timing }" invalid.` );
 		const interceptionTiming = params.timing === 'intercept' ? 'intercept' : 'sync';
-		const intersectionDepth = params.subtree ? 'subtree' : 'children';
+		const intersectionDepth = params.subtree === 'cross-roots' ? 'cross-roots' : ( params.subtree ? 'subtree' : 'children' );
 		if ( !this.registry( interceptionTiming ).size ) {
 			// One handler per intercept/sync registry
 			attrInterception.call( window, interceptionTiming, records => {
