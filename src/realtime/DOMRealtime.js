@@ -391,16 +391,43 @@ function domInterception( timing, callback ) {
 	};
 
 	// Intercept DOM mutation methods
-	const _originalApis = { characterData: Object.create( null ), other: Object.create( null ) };
-	[ 'insertBefore'/*Node*/, 'insertAdjacentElement', 'insertAdjacentHTML', 'setHTML',
-		'replaceChildren', 'replaceWith', 'remove', 'replaceChild'/*Node*/, 'removeChild'/*Node*/, 
-		'before', 'after', 'append', 'prepend', 'appendChild'/*Node*/, 
-	].forEach( apiName => {
+	const _apiNames = {
+		// Note the order
+		ShadowRoot: [ 'innerHTML' ],
+		DocumentFragment: [ 'replaceChildren', 'append', 'prepend' ],
+		Document: [ 'replaceChildren', 'append', 'prepend' ],
+		HTMLElement: [ 'outerText', 'innerText' ],
+		Element: [ 'append', 'prepend', 'before', 'after', 'insertAdjacentElement', 'insertAdjacentHTML', 'remove', 'replaceChildren', 'replaceWith', 'setHTML', 'innerHTML', 'outerHTML' ],
+		CharacterData: [ 'before', 'after', 'remove', 'replaceWith' ],
+		Node: [ 'insertBefore', 'replaceChild', 'removeChild', 'appendChild', 'textContent', 'nodeValue' ],
+	};
+	const _apiOriginals = {
+		// Note the order
+		ShadowRoot: Object.create( null ), // extends DocumentFragment
+		DocumentFragment: Object.create( null ), // extends Node
+		Document: Object.create( null ), // extends Node
+		HTMLElement: Object.create( null ), // extends Element,
+		Element: Object.create( null ), // extends Node
+		CharacterData: Object.create( null ), // extends Node
+		Node: Object.create( null ),
+	};
+
+	const _apiNamesUnique = new Set( Object.values( _apiNames ).reduce( ( all, apis ) => all.concat( apis ), [] ) );
+	_apiNamesUnique.forEach( apiName => {
+		
+		Object.keys( _apiNames ).forEach( DOMClassName => {
+			if ( !_apiNames[ DOMClassName ].includes( apiName ) ) return;
+			const _apiOriginal = Object.getOwnPropertyDescriptor( window[ DOMClassName ].prototype, apiName );
+			if ( !_apiOriginal ) return; // Typically: Element:setHTML
+			Object.defineProperty( window[ DOMClassName ].prototype, apiName, 'value' in _apiOriginal ? { ..._apiOriginal, value: method } : { ..._apiOriginal, set: setter } );
+			_apiOriginals[ DOMClassName ][ apiName ] = _apiOriginal;
+		} );
+
 		function method( ...args ) {
-			const originalApis = this instanceof CharacterData ? _originalApis.characterData : _originalApis.other;
+			const DOMClassName = Object.keys( _apiOriginals ).find( name => this instanceof window[ name ] && ( apiName in _apiOriginals[ name ] ) );
+			const $apiOriginals = _apiOriginals[ DOMClassName ];
 			// Instance of Node interface? Abort!
-			const exec = () => originalApis[ apiName ].call( this, ...args );
-			if ( !( this instanceof CharacterData || this instanceof Element || this instanceof DocumentFragment ) ) return exec();
+			let exec = () => $apiOriginals[ apiName ].value.call( this, ...args );
 			if ( webqit.realdom.domInterceptionNoRecurse.get( this ) === apiName ) return exec();
 			// --------------
 			// Obtain exits and entrants
@@ -438,11 +465,11 @@ function domInterception( timing, callback ) {
 				let tempNodeName = this.nodeName;
 				if ( apiName === 'insertAdjacentHTML' && [ 'beforebegin', 'afterend' ].includes( args[ 0 ] ) ) {
 					// We can't handle this... and this is going to throw afterall
-					if ( !this.parentNode ) return originalApis[ apiName ].call( this, ...args );
+					if ( !this.parentNode ) return $apiOriginals[ apiName ].value.call( this, ...args );
 					tempNodeName = this.parentNode.nodeName;
 				}
 				const temp = document.createElement( tempNodeName );
-				originalApis.setHTML.call( temp, entrants[ 0 ], apiName === 'setHTML' ? args[ 1 ] : {} );
+				$apiOriginals.setHTML.value.call( temp, entrants[ 0 ], apiName === 'setHTML' ? args[ 1 ] : {} );
 				entrants = [ ...temp.childNodes ];
 				// --------------  
 				if ( apiName === 'insertAdjacentHTML' ) {
@@ -457,41 +484,16 @@ function domInterception( timing, callback ) {
 			// --------------
 			const record = { target, entrants, exits, type: 'interception', event: [ this, apiName ] };
 			return intercept( record, () => {
-				return originalApis[ apiNameFinal ].call( this, ...args );
+				return $apiOriginals[ apiNameFinal ].value.call( this, ...args );
 			} );
 		}
-		// We'll be sure to monkey the correct interface
-		if ( [ 'insertBefore', 'replaceChild', 'removeChild', 'appendChild' ].includes( apiName ) ) {
-			_originalApis.other[ apiName ] = Node.prototype[ apiName ];
-			Node.prototype[ apiName ] = method;
-		} else {
-			// Comment nodes have this methods too
-			if ( [ 'after', 'before', 'remove', 'replaceWith' ].includes( apiName ) ) {
-				_originalApis.characterData[ apiName ] = CharacterData.prototype[ apiName ];
-				CharacterData.prototype[ apiName ] = method;
-			}
-			// In case newer methods like setHTML() are not supported
-			if ( Element.prototype[ apiName ] ) {
-				_originalApis.other[ apiName ] = Element.prototype[ apiName ];
-				Element.prototype[ apiName ] = method;
-			}
-		}
-	} );
 
-	const originalApis = Object.create( null );
-	// Intercept DOM mutation properties
-	[ 'outerHTML', 'outerText'/*HTMLElement*/, 'innerHTML', 
-		'innerText'/*HTMLElement*/,'textContent'/*Node*/, 'nodeValue'/*Node*/
-	].forEach( apiName => {
-		// We'll be sure to monkey the correct interface
-		const Interface = [ 'textContent', 'nodeValue' ].includes( apiName ) ? Node : (
-			[ 'outerText', 'innerText' ].includes( apiName ) ? HTMLElement : Element
-		);
-		originalApis[ apiName ] = Object.getOwnPropertyDescriptor( Interface.prototype, apiName );
-		Object.defineProperty( Interface.prototype, apiName, { ...originalApis[ apiName ], set: function( value ) {
-			let exec = () => originalApis[ apiName ].set.call( this, value );
+		function setter( value ) {
+			const DOMClassName = Object.keys( _apiOriginals ).find( name => this instanceof window[ name ] && ( apiName in _apiOriginals[ name ] ) );
+			const $apiOriginals = _apiOriginals[ DOMClassName ];
 			// Instance of Node interface? Abort!
-			if ( !( this instanceof Element ) ) return exec();
+			let exec = () => $apiOriginals[ apiName ].set.call( this, value );
+			if ( webqit.realdom.domInterceptionNoRecurse.get( this ) === apiName ) return exec();
 			// --------------
 			// Obtain exits and entrants
 			let exits = [], entrants = [], target = this;
@@ -513,9 +515,9 @@ function domInterception( timing, callback ) {
 					if ( !this.parentNode ) return exec();
 					tempNodeName = this.parentNode.nodeName;
 				}
-				const temp = document.createElement( tempNodeName === 'TEMPLATE' ? 'div' : tempNodeName );
-				originalApis[ apiName ].set.call( temp, value );
-				entrants = /*[ ...temp.childNodes ];*/this instanceof HTMLTemplateElement ? [] : [ ...temp.childNodes ];
+				const temp = document.createElement( tempNodeName === 'TEMPLATE' || tempNodeName.includes( '-' ) ? 'div' : tempNodeName );
+				noRecurse( temp, apiName, () => temp[ apiName ] = value );
+				entrants = /*??[ ...temp.childNodes ];*/this instanceof HTMLTemplateElement ? [] : [ ...temp.childNodes ];
 				// -------------- 
 				if ( apiName === 'outerHTML' ) {
 					value = new DocumentFragment;
@@ -532,28 +534,7 @@ function domInterception( timing, callback ) {
 			// -------------- 
 			const record = { target, entrants, exits, type: 'interception', event: [ this, apiName ] };
 			return intercept( record, exec );
-		} } );
-	} );
-
-	// Intercept document mutation methods
-	[ 'append', 'prepend', 'replaceChildren' ].forEach( apiName => {
-		[ document, DocumentFragment.prototype ].forEach( target => {
-			const originalApi = target[ apiName ];
-			target[ apiName ] = function( ...args ) {
-				if ( webqit.realdom.domInterceptionNoRecurse.get( this ) === apiName ) return originalApi.call( this, ...args );
-				const exits = apiName === 'replaceChildren' ? [ ...this.childNodes ] : [];
-				const record = {
-					target: this,
-					entrants: args,
-					exits,
-					type: 'interception', 
-					event: [ this, apiName ]
-				};
-				return intercept( record, () => {
-					return originalApi.call( this, ...args );
-				} );
-			}
-		} );
+		}
 	} );
 
 	return rm;
