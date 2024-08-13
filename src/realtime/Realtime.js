@@ -109,7 +109,7 @@ export default class Realtime {
 		}
 		// Saving everything to dispatchBatch ensures that recursive modifications
 		// to both this.registry( interceptionTiming ), registries, and registry aren't pciked up
-		for ( const [ registration, record_s, context ] of dispatchBatch ) {
+		for ( const [ registration, record_s, context ] of [...dispatchBatch].reverse() ) {
 			callback.call( window, registration, record_s, context );
 		}
 	}
