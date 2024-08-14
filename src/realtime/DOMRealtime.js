@@ -522,11 +522,13 @@ function domInterception( timing, callback ) {
 				noRecurse( temp, apiName, () => temp[ apiName ] = value );
 				entrants = this instanceof HTMLTemplateElement ? [ ...temp.content.childNodes ] : [ ...temp.childNodes ];
 				if ( this instanceof HTMLTemplateElement && this.hasAttribute( 'src' ) ) {
-					const scripts = entrants.reduce( ( scripts, el ) => {
+					const getScripts = nodes => nodes.reduce( ( scripts, el ) => {
 						if ( el instanceof HTMLScriptElement ) return scripts.concat( el );
+						if ( el instanceof HTMLTemplateElement ) return scripts.concat( getScripts( [ el.content ] ) );
+						scripts = scripts.concat( getScripts( [ ...( el.querySelectorAll?.( 'template' ) || [] ) ].map( t => t.content ) ) );
 						return scripts.concat( ...( el.querySelectorAll?.( 'script' ) || [] ) );
 					}, [] );
-					for ( const script of scripts ) {
+					for ( const script of getScripts( entrants ) ) {
 						const $script = document.createElement( 'script' );
 						[ ...script.attributes ].forEach( attr => $script.setAttribute( attr.name, attr.value ) );
 						$script.textContent = script.textContent;
