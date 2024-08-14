@@ -493,7 +493,7 @@ function domInterception( timing, callback ) {
 			const $apiOriginals = _apiOriginals[ DOMClassName ];
 			// Instance of Node interface? Abort!
 			let exec = () => $apiOriginals[ apiName ].set.call( this, value );
-			if ( webqit.realdom.domInterceptionNoRecurse.get( this ) === apiName ) return exec();
+			if ( this instanceof HTMLScriptElement || webqit.realdom.domInterceptionNoRecurse.get( this ) === apiName ) return exec();
 			// --------------
 			// Obtain exits and entrants
 			let exits = [], entrants = [], target = this;
@@ -502,9 +502,12 @@ function domInterception( timing, callback ) {
 				target = this.parentNode;
 			} else {
 				// 'innerHTML', 'innerText', 'textContent', 'nodeValue'
-				exits = /*this instanceof HTMLTemplateElement 
-					? [ ...this.content.childNodes ]
-					: */[ ...this.childNodes ];
+				if ( this instanceof HTMLTemplateElement ) {
+					target = this.content;
+					exits = [ ...this.content.childNodes ];
+				} else {
+					exits = [ ...this.childNodes ];
+				}
 			}
 			// --------------
 			// Parse HTML to nodes
@@ -515,23 +518,35 @@ function domInterception( timing, callback ) {
 					if ( !this.parentNode ) return exec();
 					tempNodeName = this.parentNode.nodeName;
 				}
-				const temp = document.createElement( tempNodeName === 'TEMPLATE' || tempNodeName.includes( '-' ) ? 'div' : tempNodeName );
+				const temp = document.createElement( tempNodeName.includes( '-' ) ? 'div' : tempNodeName );
 				noRecurse( temp, apiName, () => temp[ apiName ] = value );
-				entrants = /*??[ ...temp.childNodes ];*/this instanceof HTMLTemplateElement ? [] : [ ...temp.childNodes ];
+				entrants = this instanceof HTMLTemplateElement ? [ ...temp.content.childNodes ] : [ ...temp.childNodes ];
+				if ( this instanceof HTMLTemplateElement && this.hasAttribute( 'src' ) ) {
+					const scripts = entrants.reduce( ( scripts, el ) => {
+						if ( el instanceof HTMLScriptElement ) return scripts.concat( el );
+						return scripts.concat( ...( el.querySelectorAll?.( 'script' ) || [] ) );
+					}, [] );
+					for ( const script of scripts ) {
+						const $script = document.createElement( 'script' );
+						[ ...script.attributes ].forEach( attr => $script.setAttribute( attr.name, attr.value ) );
+						$script.textContent = script.textContent;
+						script.replaceWith( $script );
+					}
+				}
 				// -------------- 
 				if ( apiName === 'outerHTML' ) {
 					value = new DocumentFragment;
-					noRecurse( value, 'append', () => value.append( ...temp.childNodes ) );
+					noRecurse( value, 'append', () => value.append( ...entrants ) );
 					exec = () => noRecurse( this, 'replaceWith', () => Element.prototype.replaceWith.call( this, value ) );
 				} else {
 					if ( this instanceof HTMLTemplateElement ) {
-						exec = () => noRecurse( this.conten, 'replaceChildren', () => this.content.replaceChildren( ...temp.childNodes ) );
+						exec = () => noRecurse( this.content, 'replaceChildren', () => this.content.replaceChildren( ...entrants ) );
 					} else {
-						exec = () => noRecurse( this, 'replaceChildren', () => Element.prototype.replaceChildren.call( this, ...temp.childNodes ) );
+						exec = () => noRecurse( this, 'replaceChildren', () => Element.prototype.replaceChildren.call( this, ...entrants ) );
 					}
 				}
 			}
-			// -------------- 
+			// --------------
 			const record = { target, entrants, exits, type: 'interception', event: [ this, apiName ] };
 			return intercept( record, exec );
 		}
