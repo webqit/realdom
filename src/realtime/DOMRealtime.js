@@ -530,7 +530,7 @@ function domInterception( timing, callback ) {
 						const $script = document.createElement( 'script' );
 						[ ...script.attributes ].forEach( attr => $script.setAttribute( attr.name, attr.value ) );
 						$script.textContent = script.textContent;
-						script.replaceWith( $script );
+						noRecurse( script, 'replaceWith', () => script.replaceWith( $script ) );
 					}
 				}
 				// -------------- 
