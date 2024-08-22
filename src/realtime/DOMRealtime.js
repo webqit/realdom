@@ -397,7 +397,7 @@ function domInterception( timing, callback ) {
 		DocumentFragment: [ 'replaceChildren', 'append', 'prepend' ],
 		Document: [ 'replaceChildren', 'append', 'prepend' ],
 		HTMLElement: [ 'outerText', 'innerText' ],
-		Element: [ 'append', 'prepend', 'before', 'after', 'insertAdjacentElement', 'insertAdjacentHTML', 'remove', 'replaceChildren', 'replaceWith', 'setHTML', 'innerHTML', 'outerHTML' ],
+		Element: [ 'append', 'prepend', 'before', 'after', 'insertAdjacentElement', 'insertAdjacentHTML', 'remove', 'replaceChildren', 'replaceWith', 'setHTMLUnsafe', 'innerHTML', 'outerHTML' ],
 		CharacterData: [ 'before', 'after', 'remove', 'replaceWith' ],
 		Node: [ 'insertBefore', 'replaceChild', 'removeChild', 'appendChild', 'textContent', 'nodeValue' ],
 	};
@@ -418,7 +418,7 @@ function domInterception( timing, callback ) {
 		Object.keys( _apiNames ).forEach( DOMClassName => {
 			if ( !_apiNames[ DOMClassName ].includes( apiName ) ) return;
 			const _apiOriginal = Object.getOwnPropertyDescriptor( window[ DOMClassName ].prototype, apiName );
-			if ( !_apiOriginal ) return; // Typically: Element:setHTML
+			if ( !_apiOriginal ) return; // Typically: Element:setHTMLUnsafe
 			Object.defineProperty( window[ DOMClassName ].prototype, apiName, 'value' in _apiOriginal ? { ..._apiOriginal, value: method } : { ..._apiOriginal, set: setter } );
 			_apiOriginals[ DOMClassName ][ apiName ] = _apiOriginal;
 		} );
@@ -439,7 +439,7 @@ function domInterception( timing, callback ) {
 				if ( [ 'beforebegin', 'afterend' ].includes( args[ 0 ] ) ) {
 					target = this.parentNode;
 				}
-			} else if ( [ 'setHTML', 'replaceChildren' ].includes( apiName ) ) {
+			} else if ( [ 'setHTMLUnsafe', 'replaceChildren' ].includes( apiName ) ) {
 				exits = [ ...this.childNodes ];
 				entrants = apiName === 'replaceChildren' ? [ ...args ] : [ args[ 0 ] ];
 			} else if ( [ 'replaceWith', 'remove' ].includes( apiName ) ) {
@@ -461,7 +461,7 @@ function domInterception( timing, callback ) {
 			// --------------
 			// Parse HTML to entrants
 			let apiNameFinal = apiName;
-			if ( [ 'insertAdjacentHTML', 'setHTML' ].includes( apiName ) ) {
+			if ( [ 'insertAdjacentHTML', 'setHTMLUnsafe' ].includes( apiName ) ) {
 				let tempNodeName = this.nodeName;
 				if ( apiName === 'insertAdjacentHTML' && [ 'beforebegin', 'afterend' ].includes( args[ 0 ] ) ) {
 					// We can't handle this... and this is going to throw afterall
@@ -469,7 +469,7 @@ function domInterception( timing, callback ) {
 					tempNodeName = this.parentNode.nodeName;
 				}
 				const temp = document.createElement( tempNodeName );
-				$apiOriginals.setHTML.value.call( temp, entrants[ 0 ], apiName === 'setHTML' ? args[ 1 ] : {} );
+				$apiOriginals.setHTMLUnsafe.value.call( temp, entrants[ 0 ], apiName === 'setHTMLUnsafe' ? args[ 1 ] : {} );
 				entrants = [ ...temp.childNodes ];
 				// --------------  
 				if ( apiName === 'insertAdjacentHTML' ) {
