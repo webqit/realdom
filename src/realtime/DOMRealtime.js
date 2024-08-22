@@ -393,7 +393,7 @@ function domInterception( timing, callback ) {
 	// Intercept DOM mutation methods
 	const _apiNames = {
 		// Note the order
-		ShadowRoot: [ 'innerHTML' ],
+		ShadowRoot: [ 'innerHTML', 'setHTMLUnsafe' ],
 		DocumentFragment: [ 'replaceChildren', 'append', 'prepend' ],
 		Document: [ 'replaceChildren', 'append', 'prepend' ],
 		HTMLElement: [ 'outerText', 'innerText' ],
