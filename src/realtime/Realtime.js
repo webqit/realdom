@@ -88,9 +88,11 @@ export default class Realtime {
 	 * 
 	 * @returns void
 	 */
+	dispatchBatch = new Set;
+	dispatchBatchControl = new Set;
 	forEachMatchingContext( interceptionTiming, record_s, callback ) {
 		const { window } = this, records = Array.isArray( record_s ) ? record_s : [ record_s ];
-		let dispatchBatch = new Set;
+		const ongoingDispatch = this.dispatchBatch.size;
 		for ( const [ depth, registries ] of this.registry( interceptionTiming ) ) {
 			for ( const [ context, registry ] of registries ) {
 				// Ensure event target is/within context
@@ -102,15 +104,21 @@ export default class Realtime {
 				// Records will be dispatched in their original form
 				if ( !Array.isArray( record_s ) ) { matches = matches[ 0 ]; }
 				for ( const registration of registry ) {
-					dispatchBatch.add( [ registration, matches, context ] );
-					//callback.call( window, registration, matches, context );
+					if ( !this.dispatchBatchControl.has( registration ) || registration.params.recursiveOk || this.type === 'attr' ) {
+						this.dispatchBatch.add( [ registration, matches, context ] );
+						this.dispatchBatchControl.add( registration );
+					}
 				}
 			}
 		}
+		if (ongoingDispatch) return;
 		// Saving everything to dispatchBatch ensures that recursive modifications
 		// to both this.registry( interceptionTiming ), registries, and registry aren't pciked up
-		for ( const [ registration, record_s, context ] of [...dispatchBatch].reverse() ) {
+		for ( const entry of this.dispatchBatch ) {
+			const [ registration, record_s, context ] = entry;
 			callback.call( window, registration, record_s, context );
+			this.dispatchBatchControl.delete(registration);
+			this.dispatchBatch.delete(entry);
 		}
 	}
 

@@ -12,6 +12,8 @@ import DOMSpec from './DOMSpec.js';
  */
 export default class AttrRealtime extends Realtime {
 
+	type = 'attr';
+
 	/**
 	 * @constructor
 	 */

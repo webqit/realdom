@@ -468,7 +468,7 @@ function domInterception( timing, callback ) {
 					if ( !this.parentNode ) return $apiOriginals[ apiName ].value.call( this, ...args );
 					tempNodeName = this.parentNode.nodeName;
 				}
-				const temp = document.createElement( tempNodeName );
+				const temp = document.createElement( tempNodeName.includes( '-' )/* custom-element | #document-fragment */ ? 'div' : tempNodeName );
 				$apiOriginals.setHTMLUnsafe.value.call( temp, entrants[ 0 ], apiName === 'setHTMLUnsafe' ? args[ 1 ] : {} );
 				entrants = [ ...temp.childNodes ];
 				// --------------  
@@ -518,10 +518,10 @@ function domInterception( timing, callback ) {
 					if ( !this.parentNode ) return exec();
 					tempNodeName = this.parentNode.nodeName;
 				}
-				const temp = document.createElement( tempNodeName.includes( '-' ) ? 'div' : tempNodeName );
+				const temp = document.createElement( tempNodeName.includes( '-' )/* custom-element | #document-fragment */ ? 'div' : tempNodeName );
 				noRecurse( temp, apiName, () => temp[ apiName ] = value );
 				entrants = this instanceof HTMLTemplateElement ? [ ...temp.content.childNodes ] : [ ...temp.childNodes ];
-				if ( this instanceof HTMLTemplateElement && this.hasAttribute( 'src' ) ) {
+				if ( ( this instanceof HTMLTemplateElement && this.hasAttribute( 'src' ) ) || this instanceof ShadowRoot ) {
 					const getScripts = nodes => nodes.reduce( ( scripts, el ) => {
 						if ( el instanceof HTMLScriptElement ) return scripts.concat( el );
 						if ( el instanceof HTMLTemplateElement ) return scripts.concat( getScripts( [ el.content ] ) );
@@ -529,6 +529,10 @@ function domInterception( timing, callback ) {
 						return scripts.concat( ...( el.querySelectorAll?.( 'script' ) || [] ) );
 					}, [] );
 					for ( const script of getScripts( entrants ) ) {
+						if (this instanceof ShadowRoot) {
+							script.setAttribute('data-handling', 'manual');
+							continue;
+						}
 						const $script = document.createElement( 'script' );
 						[ ...script.attributes ].forEach( attr => $script.setAttribute( attr.name, attr.value ) );
 						$script.textContent = script.textContent;
