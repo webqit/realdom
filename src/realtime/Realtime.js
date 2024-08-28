@@ -88,38 +88,16 @@ export default class Realtime {
 	 * 
 	 * @returns void
 	 */
-	dispatchBatch = new Set;
-	dispatchBatchControl = new Set;
 	forEachMatchingContext( interceptionTiming, record_s, callback ) {
-		const { window } = this, records = Array.isArray( record_s ) ? record_s : [ record_s ];
-		const ongoingDispatch = this.dispatchBatch.size;
-		for ( const [ depth, registries ] of this.registry( interceptionTiming ) ) {
-			for ( const [ context, registry ] of registries ) {
-				// Ensure event target is/within context
-				let matches = records.filter( record => {
-					if ( !Util.containsNode( window, context, record.target, depth === 'cross-roots' ) ) return false;
-					return [ 'subtree', 'cross-roots' ].includes( depth ) || record.target === context;
-				} );
-				if ( !matches.length ) continue;
-				// Records will be dispatched in their original form
-				if ( !Array.isArray( record_s ) ) { matches = matches[ 0 ]; }
-				for ( const registration of registry ) {
-					if ( !this.dispatchBatchControl.has( registration ) || registration.params.recursiveOk || this.type === 'attr' ) {
-						this.dispatchBatch.add( [ registration, matches, context ] );
-						this.dispatchBatchControl.add( registration );
-					}
-				}
-			}
+		const { window } = this, deferreds = new Set, testCache = new WeakMap;
+		for ( const [ registration, deferred ] of this.registry( interceptionTiming ) ) {
+			let $records = [].concat( record_s ).filter( record => Util.containsNode( window, registration.context, record.target, registration.params.subtree === 'cross-roots', testCache ) );
+			if ( !$records.length ) continue;
+			const args = [ registration, Array.isArray( record_s ) ? $records : $records[ 0 ] ];
+			if ( deferred ) deferreds.add( args ); else callback.call( window, ...args );
 		}
-		if (ongoingDispatch) return;
-		// Saving everything to dispatchBatch ensures that recursive modifications
-		// to both this.registry( interceptionTiming ), registries, and registry aren't pciked up
-		for ( const entry of this.dispatchBatch ) {
-			const [ registration, record_s, context ] = entry;
-			callback.call( window, registration, record_s, context );
-			this.dispatchBatchControl.delete(registration);
-			this.dispatchBatch.delete(entry);
-		}
+		for ( const args of deferreds ) callback.call( window, ...args );
+		deferreds.clear();
 	}
 
 	/**

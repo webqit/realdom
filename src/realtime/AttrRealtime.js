@@ -108,7 +108,6 @@ export default class AttrRealtime extends Realtime {
 		// -------------
 		if ( params.timing && ![ 'sync', 'intercept' ].includes( params.timing ) ) throw new Error( `Timing option "${ params.timing }" invalid.` );
 		const interceptionTiming = params.timing === 'intercept' ? 'intercept' : 'sync';
-		const intersectionDepth = params.subtree === 'cross-roots' ? 'cross-roots' : ( params.subtree ? 'subtree' : 'children' );
 		if ( !this.registry( interceptionTiming ).size ) {
 			// One handler per intercept/sync registry
 			attrInterception.call( window, interceptionTiming, records => {
@@ -116,17 +115,11 @@ export default class AttrRealtime extends Realtime {
 			} );
 		}
 		// -------------
-		const disconnectable = { disconnect() {
-			registry.delete( registration );
-			if ( !registry.size ) { registries.delete( context ); }
-		} };
+		const disconnectable = { disconnect() { registry.delete( registration ); } };
 		const signalGenerator = params.signalGenerator || params.lifecycleSignals && this.createSignalGenerator();
 		const registration = { context, spec, callback, params, atomics: new Map, originalFilterIsString, signalGenerator, disconnectable };
-		// -------------
-		const registries = this.registry( interceptionTiming, intersectionDepth );
-		if ( !registries.has( context ) ) { registries.set( context, new Set ); }
-		const registry = registries.get( context );
-		registry.add( registration );
+		const registry = this.registry( interceptionTiming );
+		registry.set( registration, !!registration.params.deferred );
 		// -------------
 		return this.disconnectables( params.signal, disconnectable, signalGenerator );
 	}

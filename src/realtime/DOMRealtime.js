@@ -151,7 +151,6 @@ export default class DOMRealtime extends Realtime {
 		// -------------
 		if ( params.timing && ![ 'sync', 'intercept' ].includes( params.timing ) ) throw new Error( `Timing option "${ params.timing }" invalid.` );
 		const interceptionTiming = params.timing === 'intercept' ? 'intercept' : 'sync';
-		const intersectionDepth = params.subtree === 'cross-roots' ? 'cross-roots' : ( params.subtree ? 'subtree' : 'children' );
 		if ( !this.registry( interceptionTiming ).size ) {
 			// One handler per intercept/sync registry
 			domInterception.call( window, interceptionTiming, record => {
@@ -165,17 +164,13 @@ export default class DOMRealtime extends Realtime {
 		mo.observe( context, { childList: true, subtree: params.subtree && true } );
 		// -------------
 		const disconnectable = { disconnect() {
-			mo.disconnect();
 			registry.delete( registration );
-			if ( !registry.size ) { registries.delete( context ); }
+			mo.disconnect();
 		} };
 		const signalGenerator = params.signalGenerator || params.lifecycleSignals && this.createSignalGenerator();
 		const registration = { context, spec, callback, params, signalGenerator, disconnectable };
-		// -------------
-		const registries = this.registry( interceptionTiming, intersectionDepth );
-		if ( !registries.has( context ) ) { registries.set( context, new Set ); }
-		const registry = registries.get( context );
-		registry.add( registration );
+		const registry = this.registry( interceptionTiming );
+		registry.set( registration, !!registration.params.deferred );
 		// -------------
 		if ( params.staticSensitivity ) {
 			const disconnectable_attr = staticSensitivity.call( window, registration );

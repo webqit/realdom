@@ -21,12 +21,19 @@ export function xpathMatch( window, node, expr ) {
     } catch( e ) {}
 }
 
-export function containsNode( window, a, b, crossRoots = false ) {
+export function containsNode( window, a, b, crossRoots = false, testCache = null ) {
+    const prevTest = testCache?.get( a )?.get( b );
+    if ( typeof prevTest !== 'undefined' ) return prevTest;
+    const response = val => {
+        if ( !testCache?.has( a ) ) testCache?.set( a, new WeakMap );
+        testCache?.get( a )?.set( b, val );
+        return val;
+    };
     const rootNodeA = a.getRootNode();
     const rootNodeB = b.getRootNode();
-    if ( rootNodeA === rootNodeB ) return a.contains( b );
-    if ( crossRoots && rootNodeB instanceof window.ShadowRoot ) return containsNode( window, a, rootNodeB.host, crossRoots );
-    return false;
+    if ( rootNodeA === rootNodeB ) return response( a.contains( b ) );
+    if ( crossRoots && rootNodeB instanceof window.ShadowRoot ) return response( containsNode( window, a, rootNodeB.host, crossRoots, testCache ) );
+    return response( false );
 }
 
 export function splitOuter( str, delim = '|' ) {
