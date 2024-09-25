@@ -165,7 +165,14 @@ realtime( document.body ).observe( handleChanges );
 realtime( document.body ).observe( handleChanges, { subtree: true } );
 ```
 
-> **Info** You'd normally always need this flag when the `document` object is the *context*.
+> **Info** Given that only direct children are covered without the `options.subtree` flag, you'd normally always need this flag when the `document` object is the *context*.
+
+**-->** Observe into Shadow Roots of the given element, however nested, using the `options.subtree = 'cross-roots'` flag:
+
+```js
+// Observing all subtree mutations
+realtime( document.body ).observe( handleChanges, { subtree: 'cross-roots' } );
+```
 
 ### Concept: *Targets*
 
@@ -719,7 +726,15 @@ realtime( document.body, 'attr' ).observe( handleChanges );
 realtime( document.body, 'attr' ).observe( handleChanges, { subtree: true } );
 ```
 
-> **Info** You'd normally always need this flag when the `document` object is the *context*.
+
+> **Info** Given that only direct children are covered without the `options.subtree` flag, you'd normally always need this flag when the `document` object is the *context*.
+
+**-->** Observe into Shadow Roots of the given element, however nested, using the `options.subtree = 'cross-roots'` flag:
+
+```js
+// Observing entire subtree
+realtime( document.body, 'attr' ).observe( handleChanges, { subtree: 'cross-roots' } );
+```
 
 ### Concept: *Targets*
 
