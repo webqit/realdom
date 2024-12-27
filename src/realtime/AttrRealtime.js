@@ -43,7 +43,7 @@ export default class AttrRealtime extends Realtime {
 			callback( records, flags, context );
 		} else {
 			for ( const record of records ) {
-				const flags = signalGenerator?.generate() || {};
+				const flags = signalGenerator ? signalGenerator.generate() : {};
 				callback( record, flags, context );
 			}
 		}
@@ -150,6 +150,12 @@ function dedupAndIgnoreInternals( records ) {
  */
 function dispatch( registration, records ) {
 	const { context, spec, callback, params, atomics, originalFilterIsString, signalGenerator } = registration;
+	if (!params.subtree) {
+		records = records.filter((r) => {
+			return r.target === context;
+		}); 
+	}
+	if ( !records.length ) return;
 	const $spec = spec.map( a => a + '' );
 	if ( params.atomic && !atomics.size ) {
 		records = attrIntersection( context, spec, records );
@@ -180,7 +186,7 @@ function dispatch( registration, records ) {
 		records = Array.from( atomics.entries() ).map( ( [ , value ] ) => value );
 	}
 	const record_s = originalFilterIsString ? records[ 0 ] : records;
-	const flags = signalGenerator?.generate() || {};
+	const flags = signalGenerator ? signalGenerator.generate() : {};
 	callback( record_s, flags, context );
 }
 
