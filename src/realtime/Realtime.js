@@ -2,7 +2,7 @@
 /**
  * @imports
  */
-import { _isFunction, _isObject, _internals } from '@webqit/util/js/index.js';
+import { _isFunction, _isObject, _wq } from '@webqit/util/js/index.js';
 import { _from as _arrFrom } from '@webqit/util/arr/index.js';
 import DOMSpec from './DOMSpec.js';
 import * as Util from './Util.js';
@@ -56,7 +56,7 @@ export default class Realtime {
 	 * @returns Map
 	 */
 	registry( ...args ) {
-		return _internals( 'realdom.realtime', this.window, this.namespace, ...args );
+		return _wq( this.window, 'realdom', this.namespace, ...args );
 	}
 		
 	/**

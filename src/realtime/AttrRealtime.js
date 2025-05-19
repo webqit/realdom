@@ -2,7 +2,7 @@
 /**
  * @imports
  */
-import { _internals } from '@webqit/util/js/index.js';
+import { _wq } from '@webqit/util/js/index.js';
 import Realtime from './Realtime.js';
 import DOMSpec from './DOMSpec.js';
 
@@ -135,7 +135,7 @@ export default class AttrRealtime extends Realtime {
 function dedupAndIgnoreInternals( records ) {
 	return records.reduce( ( rcds, rcd, i ) => {
 		if ( rcds[ i - 1 ]?.attributeName === rcd.attributeName ) return rcds;
-		if ( _internals( rcd.target, 'internalAttrInteractions' ).get( rcd.attributeName ) ) return rcds;
+		if ( _wq( rcd.target, 'realdom', 'internalAttrInteractions' ).get( rcd.attributeName ) ) return rcds;
 		return rcds.concat( rcd );
 	}, [] );
 }
@@ -193,10 +193,10 @@ function dispatch( registration, records ) {
 /**
  */
 function internalAttrInteraction( node, attrName, callback ) {
-	const savedAttrLocking = _internals( node, 'internalAttrInteractions' ).get( attrName );
-	_internals( node, 'internalAttrInteractions' ).set( attrName, true );
+	const savedAttrLocking = _wq( node, 'realdom', 'internalAttrInteractions' ).get( attrName );
+	_wq( node, 'realdom', 'internalAttrInteractions' ).set( attrName, true );
 	const value = callback();
-	_internals( node, 'internalAttrInteractions' ).set( attrName, savedAttrLocking );
+	_wq( node, 'realdom', 'internalAttrInteractions' ).set( attrName, savedAttrLocking );
 	return value;
 }
 
@@ -264,7 +264,7 @@ function attrInterception( timing, callback ) {
 		// ------------------
 		registry[ record.name ] = registry[ record.name ] || [];
 		registry[ record.name ].unshift( record.event );
-		if ( _internals( record.target, 'internalAttrInteractions' ).get( record.name ) ) return defaultAction();
+		if ( _wq( record.target, 'realdom', 'internalAttrInteractions' ).get( record.name ) ) return defaultAction();
 		// ------------------
 		webqit.realdom.attrInterceptionHooks.get( 'intercept' )?.forEach( callback => callback( [ record ] ) );
 		const returnValue = defaultAction();
