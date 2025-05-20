@@ -477,6 +477,7 @@ function domInterception( timing, callback ) {
 				}
 			}
 			// --------------
+			if ( !target ) return exec();
 			const record = { target, entrants, exits, type: 'interception', event: [ this, apiName ] };
 			return intercept( record, () => {
 				return $apiOriginals[ apiNameFinal ].value.call( this, ...args );
