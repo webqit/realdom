@@ -129,10 +129,7 @@ export function isShadowRoot(value) {
 }
 
 export function isDocument(value) {
-    return (
-        value?.nodeType === 9 && // DOCUMENT_NODE
-        Object.prototype.toString.call(value) === '[object Document]'
-    );
+    return value?.nodeType === 9 ;
 }
 
 export function isCharacterData(value) {
