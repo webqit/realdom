@@ -1,3 +1,4 @@
+import { isShadowRoot } from '../index.js';
 
 
 export function isXpath( expr ) { return ( expr = expr.trim() ) && expr.startsWith( '(' ) && expr.endsWith( ')' ) }
@@ -32,7 +33,7 @@ export function containsNode( window, a, b, crossRoots = false, testCache = null
     const rootNodeA = a.getRootNode();
     const rootNodeB = b.getRootNode();
     if ( rootNodeA === rootNodeB ) return response( a.contains( b ) );
-    if ( crossRoots && rootNodeB instanceof window.ShadowRoot ) return response( containsNode( window, a, rootNodeB.host, crossRoots, testCache ) );
+    if ( crossRoots && isShadowRoot(rootNodeB) ) return response( containsNode( window, a, rootNodeB.host, crossRoots, testCache ) );
     return response( false );
 }
 

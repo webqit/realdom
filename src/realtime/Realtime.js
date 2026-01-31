@@ -4,6 +4,7 @@
  */
 import { _isFunction, _isObject, _wq } from '@webqit/util/js/index.js';
 import { _from as _arrFrom } from '@webqit/util/arr/index.js';
+import { isNode } from '../index.js';
 import DOMSpec from './DOMSpec.js';
 import * as Util from './Util.js';
 
@@ -41,7 +42,7 @@ export default class Realtime {
 		} else if ( _isObject( args[ 1 ] ) && args.length === 2 ) {
 			args = [ _arrFrom( args[ 0 ], false/*castObject*/ ), undefined, args[ 1 ] ];
 		} else { args[ 0 ] = _arrFrom( args[ 0 ], false/*castObject*/ ); }
-		if ( args[ 0 ].filter( x => typeof x !== 'string' && !( x instanceof DOMSpec ) && !( x instanceof this.window.Node ) ).length ) {
+		if ( args[ 0 ].filter( x => typeof x !== 'string' && !( x instanceof DOMSpec ) && !( isNode(x) ) ).length ) {
 			throw new Error( `Argument #2 must be either a string or a Node object, or a list of those.` );
 		}
 		args[ 0 ] = args[ 0 ].map( s => s instanceof DOMSpec ? s : new DOMSpec( s ) );
