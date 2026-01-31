@@ -9,7 +9,7 @@
     "reactive DOM library"
   ],
   "homepage": "https://webqit.io/tooling/realdom",
-  "version": "2.1.35",
+  "version": "2.1.36",
   "license": "MIT",
   "repository": {
     "type": "git",
