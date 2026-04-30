@@ -8,7 +8,6 @@
     "realtime-dom",
     "reactive DOM library"
   ],
-  "homepage": "https://webqit.io/tooling/realdom",
   "version": "2.1.37",
   "license": "MIT",
   "repository": {
@@ -25,15 +24,14 @@
   },
   "main": "./src/index.js",
   "scripts": {
-    "test": "mocha --extension .test.js --exit",
-    "test:coverage": "c8 --reporter=text-lcov npm run test | coveralls",
-    "build": "esbuild main=src/targets.browser.js --bundle --minify --sourcemap --outdir=dist",
-    "preversion": "npm run test && npm run build && git add -A dist",
-    "postversion": "npm publish",
-    "postpublish": "git push && git push --tags"
+    "test": "mocha --extension .test.js --recursive --timeout 5000 --exit",
+    "build": "esbuild main=src/targets.browser.js --bundle --keep-names --minify --sourcemap --outdir=dist",
+    "preversion": "npm run test && npm run build",
+    "postversion": "git push && git push --tags",
+    "version:next": "npm version prerelease --preid=next"
   },
   "dependencies": {
-    "@webqit/util": "^0.8.16"
+    "@webqit/util": "^0.8.19"
   },
   "devDependencies": {
     "chai": "^4.3.4",
@@ -47,22 +45,5 @@
   "maintainers": [
     "Oxford Harrison <oxharris.dev@gmail.com>"
   ],
-  "contributors": [],
-  "funding": {
-    "type": "patreon",
-    "url": "https://patreon.com/ox_harris"
-  },
-  "badges": {
-    "list": [
-      "npmversion",
-      "npmdownloads"
-    ],
-    "config": {
-      "patreonUsername": "ox_harris",
-      "githubUsername": "webqit",
-      "githubRepository": "realdom",
-      "githubSlug": "webqit/realdom",
-      "npmPackageName": "@webqit/realdom"
-    }
-  }
+  "contributors": []
 }
