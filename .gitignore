@@ -1,3 +1,6 @@
 .*
+!/.github
+!.vitepress
 !/.gitignore
+coverage
 node_modules
