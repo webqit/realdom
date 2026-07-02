@@ -1,5 +1,10 @@
 import { isShadowRoot } from '../index.js';
 
+export const symbols = {
+    querySelector: Symbol('querySelector'),
+    querySelectorAll: Symbol('querySelectorAll'),
+    dlrApply: Symbol('apply'),
+};
 
 export function isXpath( expr ) { return ( expr = expr.trim() ) && expr.startsWith( '(' ) && expr.endsWith( ')' ) }
 

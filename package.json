@@ -25,12 +25,13 @@
   "main": "./src/index.js",
   "scripts": {
     "test": "mocha --extension .test.js --recursive --timeout 5000 --exit",
-    "build": "esbuild main=src/targets.browser.js --bundle --keep-names --minify --sourcemap --outdir=dist",
+    "build": "esbuild main=src/targets.browser.js main.polyfill=src/targets.browser.polyfill.js --bundle --keep-names --minify --sourcemap --outdir=dist",
     "preversion": "npm run test && npm run build",
     "postversion": "git push && git push --tags",
     "version:next": "npm version prerelease --preid=next"
   },
   "dependencies": {
+    "@webqit/observer": "^3.8.22",
     "@webqit/util": "^0.8.19"
   },
   "devDependencies": {

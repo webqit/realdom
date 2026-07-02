@@ -7,6 +7,7 @@ import { _from as _arrFrom } from '@webqit/util/arr/index.js';
 import { isNodeInterface, isShadowRoot } from '../index.js';
 import AttrRealtime from './AttrRealtime.js';
 import Realtime from './Realtime.js';
+import { symbols } from './Util.js';
 import * as Util from './Util.js';
 
 /**
@@ -58,7 +59,7 @@ export default class DOMRealtime extends Realtime {
 				}, [[], []]);
 				const matches = [];
 				if (params.subtree) {
-					if (cssSelectors.length) { matches.push(...context.querySelectorAll(cssSelectors.join(','))); }
+					if (cssSelectors.length) { matches.push(...(context[symbols.querySelectorAll] || context.querySelectorAll).call(context, cssSelectors.join(','))); }
 					if (xpathQueries.length) { matches.push(...Util.xpathQuery(this.window, context, xpathQueries)); }
 				} else {
 					if (cssSelectors.length) { matches.push(...[...context.children].filter(node => node.matches(cssSelectors))); }
@@ -302,7 +303,9 @@ function nodesIntersection(spec, crossRoots, sources, deepIntersect) {
 			if (deepIntersect || s.isXpathAttr) {
 				matches = sources.reduce((collection, source) => {
 					if (s.kind === 'xpath') { return [...collection, ...Util.xpathQuery(this, source, s, deepIntersect)]; }
-					return source.querySelectorAll ? [...collection, ...source.querySelectorAll(s + '')] : collection;
+					return  (source[symbols.querySelectorAll] || source.querySelectorAll)
+						? [...collection, ...((source[symbols.querySelectorAll] || source.querySelectorAll).call(source, s + ''))]
+						: collection;
 				}, matches);
 			}
 			if (matches.length) return matches;
@@ -524,8 +527,8 @@ function domInterception(timing, callback) {
 					const getScripts = nodes => nodes.reduce((scripts, el) => {
 						if (isNodeInterface(el, 'HTMLScriptElement')) return scripts.concat(el);
 						if (isNodeInterface(el, 'HTMLTemplateElement')) return scripts.concat(getScripts([el.content]));
-						scripts = scripts.concat(getScripts([...(el.querySelectorAll?.('template') || [])].map(t => t.content)));
-						return scripts.concat(...(el.querySelectorAll?.('script') || []));
+						scripts = scripts.concat(getScripts([...((el[symbols.querySelectorAll] || el.querySelectorAll))?.call(el, 'template') || []].map(t => t.content)));
+						return scripts.concat(...(el[symbols.querySelectorAll] || el.querySelectorAll)?.call(el, 'script') || []);
 					}, []);
 					for (const script of getScripts(entrants)) {
 						if (isShadowRoot(this)) {

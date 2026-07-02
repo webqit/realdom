@@ -14,13 +14,16 @@ import * as Util from './Util.js';
  */
 export default class Realtime {
 
+	#context;
+	get context() { return this.#context; }
+
 	/**
 	 * @constructor
 	 *
 	 * @param document|Element	context
 	 */
 	constructor( context, namespace, window ) {
-		this.context = context;
+		this.#context = context;
 		this.namespace = namespace;
 		this.window = context.defaultView || context.ownerDocument?.defaultView || window;
 		this.document = this.window.document;

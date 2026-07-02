@@ -4,26 +4,86 @@
  */
 import { _isNumeric, _isString, _isFunction } from '@webqit/util/js/index.js';
 import { _set } from '@webqit/util/obj/index.js';
-import Scheduler from './Scheduler.js';
-import DOMRealtime from './realtime/DOMRealtime.js';
+import DOMLiveResult from './realtime/DOMLiveResult.js';
 import AttrRealtime from './realtime/AttrRealtime.js';
+import DOMRealtime from './realtime/DOMRealtime.js';
+import { symbols } from './realtime/Util.js';
 import polyfill from './polyfills.js';
+import Scheduler from './Scheduler.js';
 
-export default function () {
+export default function ({ polyfillQuerySelectors = false, } = {}) {
     const window = this;
     if (!window.webqit) window.webqit = {};
+
     if (window.webqit.realdom) return window.webqit.realdom;
     window.webqit.realdom = {};
     polyfill.call(window);
+
     // ------
+
     window.webqit.realdom.meta = (...args) => meta.call(window, ...args);
     window.webqit.realdom.ready = (...args) => ready.call(window, ...args);
+    window.webqit.DOMLiveResult = DOMLiveResult;
+
     // ------
-    window.webqit.realdom.realtime = (context, namespace = 'dom') => {
+
+    const execRealtime = (context, namespace = 'dom') => {
         if (namespace === 'dom') return new DOMRealtime(context, window);
         if (namespace === 'attr') return new AttrRealtime(context, window);
     };
+    window.webqit.realdom.realtime = execRealtime;
+
     // ------
+
+    function _execQuerySelector(selector, all = false, { live = false, subtree = true/*cross-roots*/, timing = 'sync', staticSensitivity = true } = {}) {
+        const context = this || window.document;
+        if (!live) {
+            if (subtree === false) selector = `:scope > :is(${selector})`;
+            return all
+                ? context.querySelectorAll(selector)
+                : context.querySelector(selector);
+        }
+        const liveResult = new DOMLiveResult(context, selector, all, () => {
+            disconnectable.disconnect();
+        });
+        const disconnectable = execRealtime(context).query(selector, (record) => {
+            liveResult[symbols.dlrApply](record);
+        }, { id: 'realdom:live_query', live: true, subtree, timing, staticSensitivity, eventDetails: false });
+        return liveResult;
+    }
+    function _querySelector(selector, opts) {
+        return _execQuerySelector.call(this, selector, false, opts);
+    }
+    function _querySelectorAll(selector, opts) {
+        return _execQuerySelector.call(this, selector, true, opts);
+    }
+
+    window.webqit.realdom.querySelector = _querySelector;
+    window.webqit.realdom.querySelectorAll = _querySelectorAll;
+
+    // ------
+
+    if (polyfillQuerySelectors) {
+        // Intercept querySelector() and querySelectorAll()
+        for (const [apiName, apiSymbol, rewrittenQueryApi] of [
+            ['querySelector', symbols.querySelector, _querySelector],
+            ['querySelectorAll', symbols.querySelectorAll, _querySelectorAll]
+        ]) {
+            for (const nodeApi of [window.Document, window.DocumentFragment, window.Element]) {
+                const originalQuerySelectorDescr = Object.getOwnPropertyDescriptor(nodeApi.prototype, apiName);
+                Object.defineProperty(nodeApi.prototype, apiSymbol, originalQuerySelectorDescr);
+                Object.defineProperty(nodeApi.prototype, apiName, {
+                    ...originalQuerySelectorDescr,
+                    value(selector, opts) {
+                        return rewrittenQueryApi.call(this, selector, opts);
+                    }
+                });
+            }
+        }
+    }
+
+    // ------
+
     const scheduler = new Scheduler(window);
     window.webqit.realdom.schedule = (type, ...args) => {
         return scheduler[`on${type}`](...args);
@@ -31,7 +91,9 @@ export default function () {
     window.webqit.realdom.synthesizeWhile = (...args) => {
         return scheduler.synthesizeWhile(...args);
     };
+
     // ------
+
     return window.webqit.realdom;
 }
 
@@ -129,7 +191,7 @@ export function isShadowRoot(value) {
 }
 
 export function isDocument(value) {
-    return value?.nodeType === 9 ;
+    return value?.nodeType === 9;
 }
 
 export function isCharacterData(value) {
@@ -141,7 +203,7 @@ export function isNodeInterface(value, interfaceName) {
     if (!isNode(value)) return false;
 
     if (interfaceName === 'ShadowRoot') {
-        return isShadowRoot(value);HTMLUnknownElement
+        return isShadowRoot(value); HTMLUnknownElement
     }
 
     const toStringValue = Object.prototype.toString.call(value);
